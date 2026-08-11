@@ -77,10 +77,20 @@ footer{padding:44px 0 64px;text-align:center;color:var(--sub);font-size:13px;lin
 /* ── screenshot placeholder ── */
 .screenshot-ph{border:2px dashed var(--line);border-radius:16px;padding:40px 20px;text-align:center;
  margin-top:16px;background:var(--bg);display:flex;flex-direction:column;align-items:center;
- justify-content:center;gap:10px;min-height:180px}
+ justify-content:center;gap:10px;min-height:180px;cursor:pointer;transition:.2s}
+.screenshot-ph:hover{border-color:var(--blue);background:#f0f6ff}
 .screenshot-ph .sph-icon{font-size:32px;line-height:1}
 .screenshot-ph strong{font-size:15px;color:var(--ink2);font-weight:600}
 .screenshot-ph small{font-size:13px;color:var(--sub);line-height:1.5}
+/* uploaded state */
+.screenshot-ph.uploaded{border:none;padding:0;background:none;min-height:0;gap:0;display:block}
+.screenshot-ph.uploaded img{width:100%;border-radius:16px;display:block}
+.screenshot-ph.uploaded .sph-overlay{display:flex;justify-content:flex-end;padding:8px;gap:8px;opacity:0;transition:.2s}
+.screenshot-ph.uploaded:hover .sph-overlay{opacity:1}
+.screenshot-ph.uploaded .sph-meta{display:none}
+.sph-btn{font-size:12px;padding:5px 12px;border-radius:8px;border:0;cursor:pointer;font-family:inherit;font-weight:600}
+.sph-btn.replace{background:var(--ink);color:#fff}
+.sph-btn.remove{background:#ff3b30;color:#fff}
 /* ── bar chart ── */
 .bar-chart{margin-top:32px;display:flex;flex-direction:column;gap:12px}
 .bar-row{display:grid;grid-template-columns:190px 1fr 52px;align-items:center;gap:12px}
@@ -171,30 +181,30 @@ footer{padding:44px 0 64px;text-align:center;color:var(--sub);font-size:13px;lin
       <h4>🏢 阿里云 AgentLoop</h4>
       <p><b>云上全栈运维路线</b><br>五种 Trace 视图、全局拓扑、告警与底层资源联动。</p>
       <ul style="margin-top:14px"><li>强：Agent 语义 + 云全栈</li><li>弱：视图多，依赖排障经验</li></ul>
-      <div class="screenshot-ph">
+      <div class="screenshot-ph" id="sph-ali-loop" data-label="阿里云 AgentLoop 控制台截图">
         <div class="sph-icon">📸</div>
-        <strong>阿里云 AgentLoop 控制台截图</strong>
-        <small>请上传实机操作截图<br>建议：Trace 列表页 + 时序线视图</small>
+        <strong class="sph-meta">阿里云 AgentLoop 控制台截图</strong>
+        <small class="sph-meta">请上传实机操作截图<br>建议：Trace 列表页 + 时序线视图</small>
       </div>
     </div>
     <div class="box">
       <h4>🏢 华为云 AgentArts</h4>
       <p><b>观测到评测闭环路线</b><br>Session → Trace 下钻，问题样本回流成评测集。</p>
       <ul style="margin-top:14px"><li>强：观测与评测打通</li><li>弱：数据分属三个产品</li></ul>
-      <div class="screenshot-ph">
+      <div class="screenshot-ph" id="sph-hw-arts" data-label="华为云 AgentArts 控制台截图">
         <div class="sph-icon">📸</div>
-        <strong>华为云 AgentArts 控制台截图</strong>
-        <small>请上传实机操作截图<br>建议：Session 下钻 + Trace 标注页</small>
+        <strong class="sph-meta">华为云 AgentArts 控制台截图</strong>
+        <small class="sph-meta">请上传实机操作截图<br>建议：Session 下钻 + Trace 标注页</small>
       </div>
     </div>
     <div class="box">
       <h4>🌐 Langfuse</h4>
       <p><b>开放数据平台路线</b><br>MIT 开源、OTel 原生、跨模型跨框架。</p>
       <ul style="margin-top:14px"><li>强：开放、可自托管</li><li>弱：自托管运维组件多</li></ul>
-      <div class="screenshot-ph">
+      <div class="screenshot-ph" id="sph-langfuse" data-label="Langfuse 控制台截图">
         <div class="sph-icon">📸</div>
-        <strong>Langfuse 控制台截图</strong>
-        <small>待获取 Langfuse 访问权限后上传<br>建议：Trace 详情 + Agent Graph 视图</small>
+        <strong class="sph-meta">Langfuse 控制台截图</strong>
+        <small class="sph-meta">待获取 Langfuse 访问权限后上传<br>建议：Trace 详情 + Agent Graph 视图</small>
       </div>
     </div>
   </div>
@@ -243,15 +253,15 @@ footer{padding:44px 0 64px;text-align:center;color:var(--sub);font-size:13px;lin
   </div>
   <h3>竞品控制台截图（对比参考）</h3>
   <div class="grid g2">
-    <div class="screenshot-ph">
+    <div class="screenshot-ph" id="sph-ali-timeline" data-label="阿里云时序线视图截图">
       <div class="sph-icon">📸</div>
-      <strong>阿里云时序线视图截图</strong>
-      <small>展示五种视图的入口位置<br>需实机操作后上传</small>
+      <strong class="sph-meta">阿里云时序线视图截图</strong>
+      <small class="sph-meta">展示五种视图的入口位置<br>需实机操作后上传</small>
     </div>
-    <div class="screenshot-ph">
+    <div class="screenshot-ph" id="sph-langfuse-graph" data-label="Langfuse Agent Graph 截图">
       <div class="sph-icon">📸</div>
-      <strong>Langfuse Agent Graph 截图</strong>
-      <small>展示图形化 Trace 视图<br>需实机操作后上传</small>
+      <strong class="sph-meta">Langfuse Agent Graph 截图</strong>
+      <small class="sph-meta">展示图形化 Trace 视图<br>需实机操作后上传</small>
     </div>
   </div>
   <p class="key" style="margin-top:44px">启示：首屏不该让用户先选视图，而该先选问题——慢、错、贵、不准。</p>
@@ -538,6 +548,7 @@ footer{padding:44px 0 64px;text-align:center;color:var(--sub);font-size:13px;lin
 </footer>
 
 <script>
+/* ── tab navigation ── */
 const T=[
   ["t01","竞品扫描"],["t02","功能拆解"],["t03","候选场景"],["t04","场景选定"],
   ["t05","设计逻辑"],["t06","商业模式"],["t07","技术选型"],["t12","可行性"],["t14","战略预判"]
@@ -560,6 +571,86 @@ function go(id,scroll){
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-go]');
   if(b) go(b.dataset.go,true);
+});
+
+/* ── screenshot upload ── */
+const STORE_KEY='sph-images-v1';
+function loadStored(){
+  try{return JSON.parse(localStorage.getItem(STORE_KEY)||'{}')}catch(e){return{}}
+}
+function saveStored(data){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(data))}catch(e){}
+}
+
+function applyImage(ph,dataUrl){
+  ph.classList.add('uploaded');
+  // clear existing contents, build uploaded view
+  ph.innerHTML=`
+    <img src="${dataUrl}" alt="${ph.dataset.label||'截图'}">
+    <div class="sph-overlay">
+      <button class="sph-btn replace" data-action="replace">替换图片</button>
+      <button class="sph-btn remove"  data-action="remove">移除</button>
+    </div>`;
+}
+
+function clearImage(ph){
+  const label=ph.dataset.label||'';
+  ph.classList.remove('uploaded');
+  ph.innerHTML=`
+    <div class="sph-icon">📸</div>
+    <strong class="sph-meta">${label}</strong>
+    <small class="sph-meta">点击上传截图</small>`;
+}
+
+function triggerPick(ph){
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='image/*';
+  input.onchange=()=>{
+    const file=input.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const dataUrl=ev.target.result;
+      applyImage(ph,dataUrl);
+      const stored=loadStored();
+      stored[ph.id]=dataUrl;
+      saveStored(stored);
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+// restore saved images on load
+(function restoreAll(){
+  const stored=loadStored();
+  document.querySelectorAll('.screenshot-ph[id]').forEach(ph=>{
+    if(stored[ph.id]) applyImage(ph,stored[ph.id]);
+  });
+})();
+
+// click: placeholder area → pick file; overlay buttons → replace / remove
+document.addEventListener('click',e=>{
+  const ph=e.target.closest('.screenshot-ph');
+  if(!ph) return;
+
+  const action=e.target.closest('[data-action]');
+  if(action){
+    e.stopPropagation();
+    if(action.dataset.action==='replace'){
+      triggerPick(ph);
+    } else if(action.dataset.action==='remove'){
+      clearImage(ph);
+      const stored=loadStored();
+      delete stored[ph.id];
+      saveStored(stored);
+    }
+    return;
+  }
+
+  // click on non-uploaded placeholder → open file picker
+  if(!ph.classList.contains('uploaded')) triggerPick(ph);
 });
 </script>
 </body>
