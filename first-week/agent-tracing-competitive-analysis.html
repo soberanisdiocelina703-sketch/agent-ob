@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Agent 链路追踪三款竞品全景对比与 AgentLoop 深度分析">
+  <title>Agent 链路追踪：竞品对比与 AgentLoop 深度分析</title>
+  <style>
+    :root {
+      --ink: #12202f;
+      --muted: #5e6b78;
+      --paper: #f4f2ec;
+      --card: #fffdfa;
+      --line: #d9d5cb;
+      --navy: #10283c;
+      --navy-2: #183e59;
+      --cyan: #32b8bd;
+      --cyan-soft: #dff5f3;
+      --orange: #f18a4b;
+      --orange-soft: #fff0e5;
+      --red: #c8554d;
+      --red-soft: #fae9e7;
+      --green: #287e64;
+      --green-soft: #e3f2ec;
+      --shadow: 0 18px 50px rgba(16, 40, 60, .09);
+      --radius: 20px;
+      --aside: 272px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 85% 8%, rgba(50,184,189,.09), transparent 22rem),
+        linear-gradient(180deg, #f8f6f1 0%, var(--paper) 100%);
+      font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      line-height: 1.68;
+    }
+    a { color: #136a77; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: #0d4f5a; }
+    button, summary { font: inherit; }
+
+    .side {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: var(--aside);
+      padding: 26px 18px;
+      color: #eaf3f5;
+      background: var(--navy);
+      overflow-y: auto;
+      z-index: 20;
+    }
+    .brand { display: flex; gap: 12px; align-items: center; margin: 0 8px 24px; }
+    .brand-mark {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border-radius: 12px; background: var(--cyan); color: var(--navy); font-weight: 900;
+      box-shadow: 0 8px 20px rgba(50,184,189,.25);
+    }
+    .brand strong { display: block; font-size: 15px; }
+    .brand span { color: #9fb2be; font-size: 11px; letter-spacing: .08em; }
+    .side nav { display: grid; gap: 3px; }
+    .side nav a {
+      color: #b9cad2; text-decoration: none; padding: 8px 11px;
+      border-radius: 9px; font-size: 13px; line-height: 1.35;
+    }
+    .side nav a:hover, .side nav a.active { color: white; background: rgba(50,184,189,.16); }
+    .side-foot { margin: 24px 10px 0; color: #8299a5; font-size: 11px; }
+
+    .mobile-head { display: none; }
+    main { margin-left: var(--aside); }
+    .hero {
+      min-height: 650px;
+      padding: 76px clamp(28px, 6vw, 94px) 64px;
+      color: white;
+      background:
+        linear-gradient(135deg, rgba(50,184,189,.14), transparent 40%),
+        linear-gradient(160deg, var(--navy) 0%, #0c1e2e 72%);
+      position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: ""; position: absolute; width: 430px; height: 430px; right: -140px; top: -160px;
+      border: 1px solid rgba(255,255,255,.1); border-radius: 50%;
+      box-shadow: 0 0 0 50px rgba(255,255,255,.025), 0 0 0 110px rgba(255,255,255,.018);
+    }
+    .eyebrow { color: #91dadd; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; font-weight: 800; }
+    .hero h1 { max-width: 920px; margin: 16px 0 16px; font-size: clamp(40px, 6vw, 76px); line-height: 1.04; letter-spacing: -.045em; }
+    .hero .lead { max-width: 860px; color: #c8d7de; font-size: clamp(17px, 2vw, 22px); }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 25px 0 38px; }
+    .meta span { padding: 7px 11px; border: 1px solid rgba(255,255,255,.15); border-radius: 999px; color: #c9d9df; font-size: 12px; }
+    .verdict {
+      position: relative; z-index: 1; max-width: 960px; padding: 26px 28px;
+      border-left: 4px solid var(--orange); border-radius: 0 16px 16px 0;
+      background: rgba(255,255,255,.07); backdrop-filter: blur(6px);
+    }
+    .verdict small { color: #f7b283; font-weight: 800; letter-spacing: .08em; }
+    .verdict p { margin: 8px 0 0; font-size: clamp(20px, 2.5vw, 29px); line-height: 1.42; font-weight: 650; }
+
+    .wrap { max-width: 1320px; margin: auto; padding: 44px clamp(20px, 5vw, 72px) 100px; }
+    section { scroll-margin-top: 24px; margin: 0 0 60px; }
+    .section-head { display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; margin-bottom: 24px; }
+    .num { width: 56px; height: 56px; border-radius: 17px; background: var(--navy); color: white; display: grid; place-items: center; font-weight: 850; }
+    h2 { margin: 0; font-size: clamp(27px, 3vw, 40px); letter-spacing: -.025em; line-height: 1.18; }
+    h3 { margin: 28px 0 12px; font-size: 21px; line-height: 1.3; }
+    h4 { margin: 22px 0 8px; font-size: 17px; }
+    p { margin: 9px 0 14px; }
+    .sub { color: var(--muted); max-width: 900px; margin: 7px 0 0; }
+    .grid { display: grid; gap: 18px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 23px; box-shadow: var(--shadow); }
+    .card h3, .card h4 { margin-top: 0; }
+    .card p:last-child { margin-bottom: 0; }
+    .kpi { min-height: 166px; }
+    .kpi strong { display: block; font-size: 34px; line-height: 1.1; color: var(--navy); }
+    .kpi span { display: block; margin: 7px 0; font-weight: 750; }
+    .kpi p { color: var(--muted); font-size: 13px; }
+    .accent { border-top: 5px solid var(--cyan); }
+    .accent.orange { border-color: var(--orange); }
+    .accent.red { border-color: var(--red); }
+    .accent.green { border-color: var(--green); }
+
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; vertical-align: 1px; }
+    .fact { color: #14645b; background: var(--green-soft); }
+    .infer { color: #8a5a0a; background: #fff2cf; }
+    .recommend { color: #9a4a18; background: var(--orange-soft); }
+    .risk { color: #973d38; background: var(--red-soft); }
+
+    .callout { padding: 22px 24px; border-radius: 16px; margin: 20px 0; background: var(--cyan-soft); border-left: 4px solid var(--cyan); }
+    .callout.orange { background: var(--orange-soft); border-color: var(--orange); }
+    .callout.red { background: var(--red-soft); border-color: var(--red); }
+    .callout strong { display: block; margin-bottom: 5px; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; font-size: 13px; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid #e7e3db; text-align: left; vertical-align: top; }
+    th { color: white; background: var(--navy-2); font-weight: 750; position: sticky; top: 0; }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fbfaf6; }
+    .tight td, .tight th { padding: 10px 12px; }
+
+    .product { position: relative; overflow: hidden; }
+    .product::before { content:""; position:absolute; width:90px; height:90px; border-radius:50%; right:-25px; top:-25px; background:rgba(50,184,189,.12); }
+    .product .name { font-size: 25px; font-weight: 850; }
+    .product .type { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+    .product ul { padding-left: 18px; margin-bottom: 0; }
+
+    .score-row { display: grid; grid-template-columns: minmax(230px, 1.4fr) minmax(260px, 3fr) 56px; align-items: center; gap: 15px; margin: 16px 0; }
+    .track { height: 13px; border-radius: 999px; background: #dfddd7; overflow: hidden; }
+    .fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), #176a79); }
+    .score-row:first-of-type .fill { background: linear-gradient(90deg, var(--orange), #d65c3e); }
+    .score { font-weight: 850; font-variant-numeric: tabular-nums; }
+    .formula { color: var(--muted); font-size: 12px; }
+
+    .flow { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding: 10px 2px 18px; }
+    .flow .step { min-width: 150px; flex: 1; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); position: relative; }
+    .flow .step:not(:last-child)::after { content:"→"; position:absolute; right:-15px; top:42%; z-index:2; color:var(--orange); font-size:20px; font-weight:900; }
+    .step b { display:block; color:var(--navy); }
+    .step small { color:var(--muted); }
+
+    .arch { display: grid; gap: 12px; margin: 18px 0; }
+    .arch-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .arch-box { padding: 15px; border-radius: 13px; background: var(--card); border: 1px solid var(--line); text-align: center; font-size: 13px; font-weight: 750; }
+    .arch-box.core { color: white; background: var(--navy-2); border-color: var(--navy-2); }
+    .arch-box.ai { background: var(--orange-soft); border-color: #f3c4a5; }
+    .down { text-align: center; color: var(--orange); font-size: 22px; font-weight: 900; line-height: 1; }
+
+    .decision { display: grid; grid-template-columns: 1.35fr .65fr; gap: 20px; }
+    .decision-main { color: white; padding: 30px; border-radius: 22px; background: linear-gradient(145deg,var(--navy),var(--navy-2)); box-shadow: var(--shadow); }
+    .decision-main h3 { color: #91dadd; }
+    .decision-main blockquote { margin: 14px 0 0; padding-left: 18px; border-left: 3px solid var(--orange); font-size: 20px; line-height: 1.52; }
+    .decision-side { display: grid; gap: 14px; }
+    .mini { padding: 18px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+    .mini b { display: block; font-size: 23px; color: var(--navy); }
+
+    details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin: 10px 0; overflow: hidden; }
+    summary { cursor: pointer; padding: 15px 18px; font-weight: 780; list-style: none; }
+    summary::-webkit-details-marker { display:none; }
+    summary::after { content:"＋"; float:right; color:var(--cyan); }
+    details[open] summary::after { content:"－"; }
+    details .detail-body { padding: 0 18px 18px; color: #384957; }
+
+    .journey { display: grid; grid-template-columns: repeat(7, minmax(155px,1fr)); gap: 10px; overflow-x: auto; padding-bottom: 14px; }
+    .journey .phase { padding: 16px; min-height: 230px; border-radius: 15px; border: 1px solid var(--line); background: var(--card); }
+    .phase .emo { font-size: 25px; }
+    .phase h4 { margin: 7px 0; }
+    .phase p { font-size: 12px; color: var(--muted); }
+    .phase strong { font-size: 12px; color: var(--red); }
+
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before { content:""; position:absolute; left:7px; top:8px; bottom:10px; width:2px; background:#b7c9c9; }
+    .milestone { position:relative; padding:0 0 20px 12px; }
+    .milestone::before { content:""; position:absolute; left:-27px; top:7px; width:12px; height:12px; background:var(--cyan); border:3px solid var(--paper); border-radius:50%; }
+    .milestone b { color:var(--navy); }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+    .toolbar button, .nav-toggle {
+      border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink);
+      padding: 7px 12px; cursor: pointer;
+    }
+    .toolbar button:hover { background: var(--cyan-soft); }
+    .sources { columns: 2; column-gap: 28px; font-size: 12px; }
+    .sources li { break-inside: avoid; margin-bottom: 9px; }
+    .source-note { color: var(--muted); font-size: 12px; }
+
+    footer { margin-left: var(--aside); padding: 30px; text-align: center; color: #76838c; background: #e9e6de; font-size: 12px; }
+
+    @media (max-width: 1080px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-3 { grid-template-columns: 1fr; }
+      .decision { grid-template-columns: 1fr; }
+      .arch-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 820px) {
+      .side { transform: translateX(-105%); transition: transform .22s ease; width: min(86vw, 310px); box-shadow: 16px 0 40px rgba(0,0,0,.2); }
+      body.nav-open .side { transform: translateX(0); }
+      main, footer { margin-left: 0; }
+      .mobile-head { display:flex; position:sticky; top:0; z-index:15; padding:10px 14px; color:white; background:rgba(16,40,60,.96); align-items:center; justify-content:space-between; }
+      .nav-toggle { color:white; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); }
+      .hero { min-height: 0; padding-top: 56px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .score-row { grid-template-columns: 1fr 52px; gap:7px; }
+      .score-row .track { grid-column: 1 / -1; grid-row: 2; }
+      .section-head { grid-template-columns: 44px 1fr; }
+      .num { width:44px; height:44px; border-radius:13px; }
+      .sources { columns: 1; }
+    }
+    @media (max-width: 520px) {
+      .grid-4 { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 42px; }
+      .wrap { padding-left: 14px; padding-right: 14px; }
+      .card { padding: 18px; }
+      .arch-row { grid-template-columns: 1fr; }
+    }
+    @media print {
+      .side, .mobile-head, .toolbar { display:none !important; }
+      main, footer { margin:0; }
+      .hero { min-height:0; padding:44px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .wrap { max-width:none; padding:30px; }
+      section { break-inside:avoid-page; }
+      .card, .table-wrap { box-shadow:none; }
+      details { break-inside:avoid; }
+      details > * { display:block; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="side" aria-label="报告目录">
+    <div class="brand"><div class="brand-mark">AT</div><div><strong>Agent Tracing</strong><span>DECISION REPORT</span></div></div>
+    <nav id="toc">
+      <a href="#landscape">01 三款竞品全景</a>
+      <a href="#agentloop">02 AgentLoop 流程</a>
+      <a href="#scenarios">03 AgentLoop 场景</a>
+      <a href="#choice">04 AgentLoop 场景论证</a>
+      <a href="#design">05 AgentLoop 设计与商业</a>
+      <a href="#tech">06 AgentLoop 技术架构</a>
+      <a href="#ai">07 AgentLoop AI 能力</a>
+      <a href="#journey">08 AgentLoop 用户旅程</a>
+      <a href="#gaps">09 AgentLoop 缺陷</a>
+      <a href="#difference">10 差异化方向</a>
+      <a href="#mvp">11 MVP 路线</a>
+      <a href="#forecast">12 AgentLoop 半年预判</a>
+    </nav>
+    <div class="side-foot">检索截止：2026-08-12<br>事实 · 推断 · 建议分层</div>
+  </aside>
+
+  <div class="mobile-head"><strong>Agent 链路追踪报告</strong><button class="nav-toggle" id="navToggle" aria-label="打开目录">目录</button></div>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">Competitive intelligence · Product opportunity</div>
+      <h1>Agent 链路追踪<br>竞品对比与 AgentLoop 深度分析</h1>
+      <p class="lead">第一章对比 AgentLoop × AgentArts × Langfuse｜后续章节聚焦 AgentLoop</p>
+      <div class="meta"><span>检索截止 2026-08-12</span><span>12 章精炼分析</span><span>后续聚焦 AgentLoop</span><span>1 周原型验证</span></div>
+    </header>
+
+    <div class="wrap">
+      <section id="landscape">
+        <div class="section-head"><div class="num">01</div><div><h2>三款竞品全景</h2><p class="sub">AgentLoop 的闭环最完整，AgentArts 的套件最宽，Langfuse 的开放性最强。</p></div></div>
+        <div class="callout"><strong>术语说明</strong>专业英文名词首次出现时附中文释义，后续沿用英文或缩写。常用术语：Agent（智能体）、Trace（链路追踪记录）、Span（链路片段）、Token（词元）、OTel（OpenTelemetry，开放遥测）。</div>
+        <div class="table-wrap"><table class="tight">
+          <thead><tr><th>维度</th><th>AgentLoop</th><th>AgentArts</th><th>Langfuse</th></tr></thead>
+          <tbody>
+            <tr><td><b>Trace（链路追踪记录）</b></td><td>调用树、链路图、时序线、推理轨迹、链路分析</td><td>Root/All Span（根/全部链路片段）、调用链、会话、日志与指标</td><td>Trace Tree（链路树）、Log View（日志视图）、Agent Graph（智能体关系图）、Observation（观测事件）查询</td></tr>
+            <tr><td><b>评估</b></td><td>Agent/LLM-as-a-Judge（智能体/大模型评审）；Trace/Log/Dataset（数据集）；持续/历史</td><td>模型、代码、自适应判定；单轮/多轮；任务对比</td><td>LLM Judge（大模型评估器）、Code Evaluator（代码评估器）、人工、外部 Pipeline（流水线）</td></tr>
+            <tr><td><b>优化闭环</b></td><td>Trace2Dataset（链路转数据集）、Golden Set（黄金样本集）/Bad Case（问题案例）、实验、Prompt（提示词）/Skill（技能）/Memory（记忆）/Experience（经验）</td><td>评测集、智能分析、版本 Diff（差异对比）、自演进能力</td><td>Dataset、Experiment（实验）、Prompt、Playground（调试工作台）、CI/CD（持续集成/持续交付）</td></tr>
+            <tr><td><b>安全</b></td><td>应用行为 + eBPF（扩展伯克利包过滤器）Runtime（运行时）、风险检测、实体调查</td><td>沙箱、IAM（身份与访问管理）、日志/调用链；审计公开证据较少</td><td>遮罩、RBAC（基于角色的访问控制）/SSO（单点登录）、审计日志；非运行时安全核心</td></tr>
+            <tr><td><b>接入</b></td><td>阿里探针、开源探针、OTel、多框架/CLI（命令行界面）</td><td>原生自动、高代码托管、第三方 OTel</td><td>Python/JS SDK（软件开发工具包）、OTel、50+ 集成、LiteLLM/API（应用程序编程接口）</td></tr>
+            <tr><td><b>部署</b></td><td>阿里云托管，深度联动云服务</td><td>华为云托管，低代码与运行时一体</td><td>Cloud、Docker、K8s、三大云 Terraform</td></tr>
+            <tr><td><b>开放性</b></td><td>OTel 开放接入，平台闭源</td><td>OTel 开放接入，平台闭源</td><td>核心开源 MIT，API/SDK 完整</td></tr>
+            <tr><td><b>商业化</b></td><td>AI 积分 + 存储 + 执行；关联云服务另计</td><td>体验版 + CU/套餐；付费档未全面开放</td><td>免费层 + Core/Pro/Enterprise + 用量；可自托管</td></tr>
+          </tbody>
+        </table></div>
+        <div class="grid grid-3" style="margin-top:18px"><div class="card"><h3>AgentLoop 领先</h3><p>生产 Trace 到评估、数据集、实验、经验库与安全审计的闭环。</p></div><div class="card"><h3>AgentArts 领先</h3><p>开发、运行时、MCP、记忆、沙箱、办公入口和运维一体化。</p></div><div class="card"><h3>Langfuse 领先</h3><p>跨框架、自托管、开源透明、开发者生态和数据平台扩展性。</p></div></div>
+      </section>
+
+      <section id="agentloop">
+        <div class="section-head"><div class="num">02</div><div><h2>AgentLoop 核心流程拆解</h2><p class="sub">核心任务：把一次生产 Bad Case 从 Trace 定位到可回归验证的修复。</p></div></div>
+        <div class="flow" aria-label="AgentLoop 核心流程">
+          <div class="step"><b>1 创建空间</b><small>AgentSpace + CMS/MSE/SLS</small></div>
+          <div class="step"><b>2 接入</b><small>自动探针或 OTel</small></div>
+          <div class="step"><b>3 验证</b><small>Trace/Token/Span 到达</small></div>
+          <div class="step"><b>4 发现</b><small>筛选异常与 Bad Case</small></div>
+          <div class="step"><b>5 定位</b><small>树/图/时序/推理轨迹</small></div>
+          <div class="step"><b>6 评估</b><small>Agent Judge 持续评分</small></div>
+          <div class="step"><b>7 沉淀</b><small>Trace2Dataset</small></div>
+          <div class="step"><b>8 验证</b><small>实验对比后回生产</small></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>关键阶段</th><th>设计意图</th><th>用户阻力</th><th>机会</th></tr></thead>
+          <tbody>
+            <tr><td>空间与接入</td><td>复用云资源边界与自动探针，降低业务代码改造</td><td>前置服务多；框架探针与裸 SDK 可能重复采集</td><td>依赖体检、事务化开通、重复/断链检测</td></tr>
+            <tr><td>发现与定位</td><td>先总览粗筛，再用五种视图满足结构、时序、语义、性能排障</td><td>视图多，长链路认知切换重；用户仍需自己形成故障假设</td><td>首故障点、因果路径、证据与反证统一工作台</td></tr>
+            <tr><td>评估与数据集</td><td>把主观 Bad Case 变成可追踪 Score 和可复用资产</td><td>字段映射、采样、标注和单轮/多轮边界复杂</td><td>自动建议字段、校准集、Session 级诊断</td></tr>
+            <tr><td>实验与回生产</td><td>用同一数据集证明 Prompt/模型/工具变更有效</td><td>跨模块跳转多，变更血缘不够直接</td><td>从事故一键生成对照实验和发布门禁</td></tr>
+          </tbody>
+        </table></div>
+        <p class="source-note">事实来源：<a href="https://www.alibabacloud.com/help/zh/agentloop/latest/agentloop-quickstart-whole-process-practice" target="_blank" rel="noopener noreferrer">AgentLoop QuickStart</a>、<a href="https://help.aliyun.com/zh/document_detail/3042591.html" target="_blank" rel="noopener noreferrer">链路追踪</a>、<a href="https://help.aliyun.com/zh/document_detail/3042001.html" target="_blank" rel="noopener noreferrer">核心概念</a></p>
+      </section>
+
+      <section id="scenarios">
+        <div class="section-head"><div class="num">03</div><div><h2>AgentLoop 高价值候选场景</h2><p class="sub">相对 AgentLoop 现有能力评分：痛点 25%；频率、覆盖、付费、空白、可行性各 15%。</p></div></div>
+        <div class="card">
+          <div class="score-row"><div><b>跨 Agent 因果故障定位与回放</b><div class="formula">5 / 4 / 4 / 5 / 5 / 4</div></div><div class="track"><div class="fill" style="width:91%"></div></div><div class="score">4.55</div></div>
+          <div class="score-row"><div><b>生产质量回归预警与发布门禁</b><div class="formula">5 / 5 / 5 / 4 / 3 / 4</div></div><div class="track"><div class="fill" style="width:88%"></div></div><div class="score">4.40</div></div>
+          <div class="score-row"><div><b>Token / 延迟异常归因</b><div class="formula">4 / 5 / 5 / 4 / 2 / 5</div></div><div class="track"><div class="fill" style="width:83%"></div></div><div class="score">4.15</div></div>
+          <div class="score-row"><div><b>RAG 上下文与记忆血缘</b><div class="formula">4 / 4 / 4 / 4 / 4 / 4</div></div><div class="track"><div class="fill" style="width:80%"></div></div><div class="score">4.00</div></div>
+          <div class="score-row"><div><b>高风险行为审计与合规回放</b><div class="formula">5 / 3 / 3 / 5 / 3 / 4</div></div><div class="track"><div class="fill" style="width:79%"></div></div><div class="score">3.95</div></div>
+        </div>
+        <div class="toolbar"><button data-action="open-details">展开评分依据</button><button data-action="close-details">折叠依据</button></div>
+        <details><summary>1. 跨 Agent 因果故障定位</summary><div class="detail-body">错误节点不等于根因节点；长链路中的状态污染、错误交接、工具误选和旧记忆需要语义推理。AgentLoop 已有数据底座，但尚未公开成熟的因果诊断答案。指标：首故障点 Top-3 命中、证据接受率、MTTR、复发率。</div></details>
+        <details><summary>2. 生产质量回归门禁</summary><div class="detail-body">高频且覆盖广；AgentLoop 已有评估、数据集与实验，差异主要在把线上问题变成回归用例和 CI 门禁的速度。指标：提前发现率、误报率、Bad Case 转用例时间。</div></details>
+        <details><summary>3. Token / 延迟异常归因</summary><div class="detail-body">价值可量化、技术最成熟；AgentLoop 已有成本与耗时拆分，单独作为主方向差异不足。适合作为因果诊断的价值证明。</div></details>
+        <details><summary>4. RAG 上下文与记忆血缘</summary><div class="detail-body">要连接文档版本、检索片段、记忆来源、Prompt 拼装与最终断言。差异化不错，但需依赖完整内容与版本采集。</div></details>
+        <details><summary>5. 行为审计与合规回放</summary><div class="detail-body">强付费、强合规，但覆盖行业较窄，AgentLoop 已重点布局，安全厂商也能进入，销售周期更长。</div></details>
+      </section>
+
+      <section id="choice">
+        <div class="section-head"><div class="num">04</div><div><h2>AgentLoop 优先场景论证</h2><p class="sub">跨 Agent 因果故障定位与证据化回放。</p></div></div>
+        <div class="grid grid-2">
+          <div class="card"><h3>用户痛点</h3><ul><li>上游状态/记忆/交接错误会在下游才暴露。</li><li>技术成功不等于业务正确，普通错误码发现不了语义失败。</li><li>修复后缺少相同上下文，难证明真的解决。</li></ul></div>
+          <div class="card"><h3>AgentLoop 能力缺口</h3><ul><li>五种 Trace 视图丰富，但公开重点仍是人工下钻、热点识别和轨迹评估。</li><li>未见成熟的跨 Agent 因果诊断工作台公开证据。</li><li>机会是在现有观测底座上补齐首故障点、证据、反证和验证动作。</li></ul></div>
+          <div class="card"><h3>商业价值</h3><ul><li>买单者是 AI 平台负责人、Owner（负责人）、SRE（站点可靠性工程师）、合规团队，而非个人开发者。</li><li>对应事故时长、排障工时、低质输出、重复失败。</li><li>适合基础观测低门槛，因果诊断/回放/治理企业付费。</li></ul></div>
+          <div class="card"><h3>可行路径</h3><ul><li>W3C Trace Context（W3C 链路上下文标准）+ OTel 做跨服务底座。</li><li>扩展 Task（任务）/Handoff（交接）/State（状态）/Memory（记忆）/Artifact（制品）语义。</li><li>规则/不变量先判定，模型做语义排序，人工闭环。</li></ul></div>
+        </div>
+        <div class="callout red"><strong>反方观点</strong>标准还在变化、AI 会幻觉、AgentLoop 能快速补齐。回应是：不可变原始事件 + 可版本化语义层；证据与反证先于结论；壁垒放在跨框架故障本体、确认案例库与诊断评测集，而非图表。</div>
+      </section>
+
+      <section id="design">
+        <div class="section-head"><div class="num">05</div><div><h2>AgentLoop 设计逻辑与商业模式</h2><p class="sub">产品结构由目标客户、云服务分工和成本结构共同塑造。</p></div></div>
+        <div class="grid grid-2">
+          <div class="card"><h3>AgentLoop 收费结构</h3><p><span class="badge fact">事实</span> AI 积分 0.01 元/积分、数据集存储 0.00004 元/条/天、执行 0.001 元/次；ARMS、SLS 等关联服务另计。</p><p><span class="badge infer">推断</span> 既销售观测优化闭环，也拉动阿里云日志、可观测、模型与微服务消费。</p></div>
+          <div class="card"><h3>客户影响</h3><p>单项费率透明，但完整 TCO（总体拥有成本）分散在 AgentLoop、ARMS、SLS、MSE 等多个账单项。</p><p>采购前应按 Agent Run（智能体运行次数）、Trace 保留期、Judge 调用量与日志量做联合估算；云资源和权限绑定也会形成迁移成本。</p></div>
+        </div>
+        <div class="callout"><strong>我们的计费建议</strong>按“每月有效 Agent Run + 诊断次数”收费，基础存储、脱敏和核心查询打包；不要把一次正常排障拆成多个难预测账单项。</div>
+      </section>
+
+      <section id="tech">
+        <div class="section-head"><div class="num">06</div><div><h2>AgentLoop 技术选型与架构侦察</h2><p class="sub">区分已证实、合理推断与未确认内容，不用其他产品架构替代 AgentLoop 证据。</p></div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>证据层级</th><th>AgentLoop 内容</th><th>判断</th><th>边界</th></tr></thead>
+          <tbody>
+            <tr><td><b>已证实</b></td><td>ARMS/探针/OTel、CMS 2.0、SLS + Scheduled SQL、MSE、RAM</td><td>AgentLoop 是编排多个阿里云底座的上层 Agent 观测与优化产品</td><td>来自官方接入、核心概念与服务关联文档</td></tr>
+            <tr><td><b>高置信推断</b></td><td>异步批量上报、多租户 Trace 分析；Pipeline 将 Trace/Log 转为 Trajectory/Dataset</td><td>与公开数据流和云服务分工一致</td><td>具体实现未开源，不写成已证实事实</td></tr>
+            <tr><td><b>未确认</b></td><td>前端框架、时序/图数据库、队列、索引、私有化架构</td><td>不能以通用云架构经验替代 AgentLoop 证据</td><td>真实客户吞吐与查询 P50/P95 也未公开</td></tr>
+          </tbody>
+        </table></div>
+        <h3>AgentLoop 采集与查询架构判断</h3>
+        <div class="arch">
+          <div class="arch-row"><div class="arch-box">Agent SDK / Framework</div><div class="arch-box">Runtime / Gateway</div><div class="arch-box">OTel Collector</div><div class="arch-box">Privacy Filter</div></div><div class="down">↓</div>
+          <div class="arch-row"><div class="arch-box core">Ingestion API</div><div class="arch-box core">Queue</div><div class="arch-box core">Raw Object Store</div><div class="arch-box core">Normalizer</div></div><div class="down">↓</div>
+          <div class="arch-row"><div class="arch-box">OLAP Trace Store</div><div class="arch-box">Metadata DB</div><div class="arch-box">Graph Builder</div><div class="arch-box">Metrics & Search</div></div><div class="down">↓</div>
+          <div class="arch-row"><div class="arch-box ai">Trace / Session UI</div><div class="arch-box ai">Evaluation</div><div class="arch-box ai">Diagnosis</div><div class="arch-box ai">Dataset / Replay</div></div>
+        </div>
+        <div class="grid grid-2"><div class="card"><h3>合理实现推断</h3><ul><li>客户端异步批量，短任务显式 flush</li><li>原始事件持久化，队列削峰和重放</li><li>分析型存储、时间/租户分区与大字段外置</li><li>图聚合、虚拟列表、按需加载、Tail Sampling</li></ul><p class="source-note">以上是依据公开接入方式与通用可观测架构做出的推断。</p></div><div class="card"><h3>AgentLoop 性能判断</h3><ul><li>官方目标是企业高并发/高可用，并提供聚合 Trace 与多视图下钻。</li><li>未找到公开独立压测、真实客户规模或查询 P50/P95。</li><li>超长 Trace、高基数属性与多模态大字段表现需实机验证。</li></ul></div></div>
+      </section>
+
+      <section id="ai">
+        <div class="section-head"><div class="num">07</div><div><h2>AgentLoop AI 能力拆解</h2><p class="sub">重点判断 AgentLoop 的 AI 看什么、能否验证，以及如何进入优化闭环。</p></div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>能力</th><th>AgentLoop 当前能力</th><th>证据状态</th><th>局限</th><th>机会判断</th></tr></thead>
+          <tbody>
+            <tr><td>模型评估</td><td>Agent/LLM Judge，输出 Score/Reason，可接 Skill/MCP</td><td>官方评估文档可证实</td><td>未公开独立准确率与人机一致性</td><td>用校准集和置信边界补可信度</td></tr>
+            <tr><td>轨迹评估</td><td>完整 Trajectory、工具选择、步骤效率与完成度</td><td>官方核心概念与 Judge 文档可证实</td><td>跨轮状态污染、错误交接需实测</td><td>从“评分”升级到“因果”</td></tr>
+            <tr><td>自动诊断</td><td>STAROps 热点分析 + Judge 发现 Bad Case</td><td>官方链路与评估文档可证实</td><td>偏热点与结果评分，缺首故障点工作台</td><td>证据化 RCA（根因分析）有窗口</td></tr>
+            <tr><td>数据闭环</td><td>Trace2Dataset、Golden/BadCase、Experiment、Experience</td><td>官方数据集、实验、经验库文档可证实</td><td>字段映射、样本质量和跨模块操作仍需人工</td><td>缩短事故到回归的闭环时间</td></tr>
+            <tr><td>自然语言查询</td><td>未见通用观测数据 NL 查询公开证据</td><td>证据不足</td><td>不能写成已有能力</td><td>优先级低于高可信因果诊断</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout orange"><strong>我们的 AI 原则</strong>确定性问题先用规则、Schema、状态机不变量和实际执行验证；模型只处理语义与候选关系。每条诊断必须附 Span、State Diff、Tool 参数、Artifact 版本、支持证据、反证与置信度。</div>
+      </section>
+
+      <section id="journey">
+        <div class="section-head"><div class="num">08</div><div><h2>AgentLoop 用户旅程深挖</h2><p class="sub">沿生产 Bad Case 从接入、定位、修复到复发预防分析完整体验。</p></div></div>
+        <div class="journey">
+          <div class="phase"><div class="emo">😐</div><h4>1 接入</h4><p>SDK/OTel、Key、脱敏、检查数据。</p><strong>痛点：漏采、重复、隐私</strong><p>机会：接入体检与成本预估。</p></div>
+          <div class="phase"><div class="emo">😟</div><h4>2 发现</h4><p>从告警、客诉、低分、成本异常进入。</p><strong>痛点：不知道先看哪类失败</strong><p>机会：失败聚类与影响排序。</p></div>
+          <div class="phase"><div class="emo">😣</div><h4>3 定位</h4><p>翻树、时序、对话、参数和日志。</p><strong>痛点：最后报错不等于根因</strong><p>机会：首故障点与因果证据。</p></div>
+          <div class="phase"><div class="emo">😤</div><h4>4 协作</h4><p>分享链接、截图、上下文和责任域。</p><strong>痛点：证据散落、口径不一</strong><p>机会：脱敏事件包与诊断状态。</p></div>
+          <div class="phase"><div class="emo">🙂</div><h4>5 修复</h4><p>修改 Prompt、工具、记忆或代码。</p><strong>痛点：难控制单一变量</strong><p>机会：一键生成对照实验。</p></div>
+          <div class="phase"><div class="emo">😬</div><h4>6 验证</h4><p>重放、对比、回归后再上线。</p><strong>痛点：环境和上下文难复现</strong><p>机会：快照回放和发布门禁。</p></div>
+          <div class="phase"><div class="emo">😌</div><h4>7 学习</h4><p>同类问题进入团队知识和回归集。</p><strong>痛点：经验沉在个人</strong><p>机会：故障模式库与可复用不变量。</p></div>
+        </div>
+      </section>
+
+      <section id="gaps">
+        <div class="section-head"><div class="num">09</div><div><h2>AgentLoop 缺陷与改进</h2><p class="sub">从 AgentLoop 的公开约束中找可被验证的产品机会。</p></div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>#</th><th>问题表现</th><th>根因</th><th>改进方案</th><th>指标</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>AgentLoop 接入涉及多服务，资源创建失败不回滚</td><td>复用云产品导致依赖链长</td><td>依赖体检、事务化开通、费用预估</td><td>首条 Trace 时间/失败率</td></tr>
+            <tr><td>2</td><td>AgentLoop 暂无独立 Session 查询 SDK，评估仍有单轮边界</td><td>Session 尚未成为完整一等对象</td><td>Session API、跨轮 State Diff 与 Judge</td><td>跨轮问题命中率</td></tr>
+            <tr><td>3</td><td>AgentLoop 五种视图带来认知切换</td><td>按展示组织，而非按故障假设组织</td><td>症状→候选根因→证据→验证工作台</td><td>定位时间/视图切换数</td></tr>
+            <tr><td>4</td><td>框架插件与裸 SDK 可能重复采集，复杂异步链路可能断链</td><td>多种接入方式并存，上下文传播不一致</td><td>重复识别、断链提示、采集完整度评分</td><td>重复率/断链率/工单量</td></tr>
+            <tr><td>5</td><td>Agent Judge 缺少公开独立准确率与人机一致性基准</td><td>质量依赖模型、Rubric、数据和业务</td><td>校准集、置信区间、漂移和人工阈值</td><td>人机一致/误报漏报</td></tr>
+            <tr><td>6</td><td>AgentLoop、ARMS、SLS、MSE 等分项计费</td><td>多个云底座按服务拆分成本</td><td>Agent Run 成本归集、TCO 计算器、预算告警</td><td>预算偏差/报价周期</td></tr>
+            <tr><td>7</td><td>Trace→评估→Dataset→Experiment 仍有跨模块操作</td><td>事故上下文尚未贯穿为一等对象</td><td>事故一键转评估、样本、实验并保留血缘</td><td>闭环操作数/转用例时间</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section id="difference">
+        <div class="section-head"><div class="num">10</div><div><h2>基于 AgentLoop 的差异化方向</h2><p class="sub">评分维度：用户价值 × 相对 AgentLoop 的差异程度 × 可行性 × 防御性。</p></div></div>
+        <div class="grid grid-3">
+          <article class="card accent orange"><span class="badge recommend">主方向</span><h3>Causal-first Debugger</h3><p><b>因果优先调试器</b>：打开事故即看到候选根因、影响路径、证据、反证与成功链 Diff（差异对比）。</p><p><b>5 + 5 + 4 + 4 = 18/20</b></p></article>
+          <article class="card accent"><span class="badge infer">备选</span><h3>Compliance Replay</h3><p><b>合规回放</b>：把运行时事实、应用语义、权限决策和业务影响放进同一证据包。</p><p><b>5 + 3 + 4 + 4 = 16/20</b></p></article>
+          <article class="card accent green"><span class="badge fact">配套</span><h3>Success-unit FinOps</h3><p><b>按成功任务计量的成本运营</b>：不按单次模型调用，而按每个成功业务任务的总成本优化。</p><p><b>4 + 2 + 5 + 3 = 14/20</b></p></article>
+        </div>
+        <div class="callout"><strong>壁垒在哪里</strong>不是图画得更漂亮，而是 Agent 故障本体、跨框架语义映射、经过人工确认的因果案例库和可持续诊断评测集。</div>
+      </section>
+
+      <section id="mvp">
+        <div class="section-head"><div class="num">11</div><div><h2>技术可行性与 MVP</h2><p class="sub">先证明诊断价值，再扩展为完整平台。</p></div></div>
+        <div class="callout"><strong>MVP 释义</strong>Minimum Viable Product（最小可行产品）：用最小能力集验证核心价值。</div>
+        <h3>MVP 架构</h3>
+        <div class="arch">
+          <div class="arch-row"><div class="arch-box">SDK / OTel<br><small>软件开发工具包 / 开放遥测</small></div><div class="arch-box">Framework Adapter<br><small>框架适配器</small></div><div class="arch-box">Collector<br><small>采集器</small></div><div class="arch-box">Privacy Filter<br><small>隐私过滤器</small></div></div><div class="down">↓</div>
+          <div class="arch-row"><div class="arch-box core">Raw Event Store<br><small>原始事件存储</small></div><div class="arch-box core">Queue<br><small>消息队列</small></div><div class="arch-box core">Normalizer<br><small>标准化器</small></div><div class="arch-box core">Schema Registry<br><small>模式注册表</small></div></div><div class="down">↓</div>
+          <div class="arch-row"><div class="arch-box">Observation Store<br><small>观测数据存储</small></div><div class="arch-box">Causal Graph<br><small>因果图</small></div><div class="arch-box">Rule / Invariant<br><small>规则 / 不变量</small></div><div class="arch-box">Trajectory Judge<br><small>轨迹评估器</small></div></div><div class="down">↓</div>
+          <div class="arch-row"><div class="arch-box ai">Evidence-ranked RCA<br><small>证据排序根因分析</small></div><div class="arch-box ai">Trace / Diff UI<br><small>链路 / 差异界面</small></div><div class="arch-box ai">Case Store<br><small>案例库</small></div><div class="arch-box ai">Replay / CI Gate<br><small>回放 / 持续集成门禁</small></div></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card"><h3>必须做</h3><ol><li>OTel + 2–3 个框架适配</li><li>Agent/Task/Handoff/State/Memory/Tool/Artifact</li><li>因果图与成功/失败 Diff</li><li>规则 + 模型的证据化诊断</li><li>人工确认并转回归用例</li></ol></div>
+          <div class="card"><h3>明确不做</h3><ol><li>通用基础设施 APM</li><li>完整 Prompt 管理和低代码 Builder</li><li>自动修改并发布生产 Agent</li><li>全量模型网关</li><li>无证据的万能 AI 助手</li></ol></div>
+        </div>
+        <h3>一周原型路线</h3>
+        <div class="callout orange"><strong>范围收缩</strong>一周只验证“AgentLoop 数据之上的证据化根因定位”：1 个主框架、3 类典型故障、10–15 条已知根因 Trace，不追求完整平台。</div>
+        <div class="timeline">
+          <div class="milestone"><b>第 1 天 · 数据契约</b><p>定义核心语义事件；选定 10–15 条已知根因 Trace。</p></div>
+          <div class="milestone"><b>第 2 天 · 接入存储</b><p>打通 OTel + 1 个主框架；完成入库、脱敏和断链检查。</p></div>
+          <div class="milestone"><b>第 3 天 · Trace / Diff</b><p>展示调用树；按状态、工具和交接对比成功链与失败链。</p></div>
+          <div class="milestone"><b>第 4 天 · 诊断 v0</b><p>规则覆盖 3 类故障；模型输出候选根因、证据与置信度。</p></div>
+          <div class="milestone"><b>第 5 天 · 确认闭环</b><p>支持确认/驳回诊断，并把已确认事故转为回归样本。</p></div>
+          <div class="milestone"><b>第 6 天 · 集成测试</b><p>在 1–2 个真实 Agent 上回放事故，修复数据缺口和误报。</p></div>
+          <div class="milestone"><b>第 7 天 · 演示决策</b><p>统计 Top-3 命中率、证据接受率和定位时间，决定是否进入正式 MVP。</p></div>
+        </div>
+      </section>
+
+      <section id="forecast">
+        <div class="section-head"><div class="num">12</div><div><h2>AgentLoop 未来半年战略预判</h2><p class="sub">窗口：2026-08-12—2027-02-12。除明确路线外均为推断。</p></div></div>
+        <div class="grid grid-2">
+          <div class="card"><h3>多轮 Session 评估</h3><p><span class="badge fact">高概率</span> FAQ 已写入计划并给出约 2026-09 时间。</p><p><b>影响：</b>多轮评估不再是差异点，应聚焦跨 Agent 状态因果。</p></div>
+          <div class="card"><h3>Experience / Context 深化</h3><p><span class="badge fact">高概率</span> 已发布经验库，并强调轨迹挖掘、召回和 Memory/Context。</p><p><b>影响：</b>需做经验适用性证据与负反馈防污染。</p></div>
+          <div class="card"><h3>Coding Agent / eBPF 审计</h3><p><span class="badge fact">高概率</span> 已覆盖多类 Coding Agent 与 Runtime/eBPF 行为审计。</p><p><b>影响：</b>不把基础行为审计作为长期主差异。</p></div>
+          <div class="card"><h3>云服务体验统一</h3><p><span class="badge infer">中概率</span> 当前 AgentLoop 深度依赖 CMS/ARMS/SLS/MSE，资源与账单仍分散。</p><p><b>影响：</b>强化跨云中立与总成本透明。</p></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+  <footer>Agent 链路追踪竞品对比与 AgentLoop 深度分析 · Offline report · 2026-08-12</footer>
+
+  <script>
+    (() => {
+      const body = document.body;
+      const toggle = document.getElementById('navToggle');
+      toggle?.addEventListener('click', () => body.classList.toggle('nav-open'));
+      document.querySelectorAll('.side a').forEach(a => a.addEventListener('click', () => body.classList.remove('nav-open')));
+
+      document.querySelectorAll('[data-action="open-details"]').forEach(btn => btn.addEventListener('click', () => {
+        const section = btn.closest('section');
+        section?.querySelectorAll('details').forEach(d => d.open = true);
+      }));
+      document.querySelectorAll('[data-action="close-details"]').forEach(btn => btn.addEventListener('click', () => {
+        const section = btn.closest('section');
+        section?.querySelectorAll('details').forEach(d => d.open = false);
+      }));
+
+      const navLinks = [...document.querySelectorAll('#toc a')];
+      const sections = navLinks.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {
+          const visible = entries.filter(e => e.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (!visible) return;
+          navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + visible.target.id));
+        }, { rootMargin: '-18% 0px -68% 0px', threshold: [0, .1, .35] });
+        sections.forEach(s => observer.observe(s));
+      }
+    })();
+  </script>
+</body>
+</html>

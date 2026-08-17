@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CauseLens 因镜 · 第二周产品设计(14 项任务)</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --surface: #ffffff;
+    --surface-2: #f7f9ff;
+    --ink: #1b2434;
+    --muted: #5c6778;
+    --line: #e4e9f2;
+    --accent: #3d5cff;
+    --accent-ink: #2545e8;
+    --accent-soft: #eef1ff;
+    --grad: linear-gradient(120deg, #3d5cff, #22a8e0);
+    --ok: #189a52;
+    --ok-soft: #e6f6ed;
+    --warn: #b97102;
+    --warn-soft: #fdf3e0;
+    --err: #d43d33;
+    --err-soft: #fdeceb;
+    --purple: #7d4fd3;
+    --purple-soft: #f2ecfd;
+    --shadow: 0 1px 2px rgba(20,30,60,.05), 0 10px 30px rgba(20,30,60,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f141d;
+      --surface: #171e2b;
+      --surface-2: #1c2433;
+      --ink: #e7ecf5;
+      --muted: #98a3b5;
+      --line: #2a3345;
+      --accent: #7591ff;
+      --accent-ink: #93a9ff;
+      --accent-soft: #232c45;
+      --grad: linear-gradient(120deg, #4c68ff, #1e9fd6);
+      --ok: #4cc584;
+      --ok-soft: #14311f;
+      --warn: #e0a33e;
+      --warn-soft: #33270e;
+      --err: #ef7268;
+      --err-soft: #391512;
+      --purple: #ab8af0;
+      --purple-soft: #291f3f;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141d;
+    --surface: #171e2b;
+    --surface-2: #1c2433;
+    --ink: #e7ecf5;
+    --muted: #98a3b5;
+    --line: #2a3345;
+    --accent: #7591ff;
+    --accent-ink: #93a9ff;
+    --accent-soft: #232c45;
+    --grad: linear-gradient(120deg, #4c68ff, #1e9fd6);
+    --ok: #4cc584;
+    --ok-soft: #14311f;
+    --warn: #e0a33e;
+    --warn-soft: #33270e;
+    --err: #ef7268;
+    --err-soft: #391512;
+    --purple: #ab8af0;
+    --purple-soft: #291f3f;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+  }
+
+  /* ============ 顶栏 ============ */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: var(--grad);
+    color: #fff;
+    font-weight: 800;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex: none;
+  }
+  .topbar h1 { font-size: 17px; font-weight: 700; }
+  .topbar h1 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .topbar .meta { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+
+  /* ============ 横向标签导航 ============ */
+  .tabbar-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .tabbar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 24px;
+    max-width: 1120px;
+    margin: 0 auto;
+    scrollbar-width: thin;
+  }
+  .tab {
+    flex: none;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 13px;
+    font-family: inherit;
+    padding: 7px 14px;
+    border-radius: 99px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .tab b { font-weight: 700; margin-right: 4px; font-variant-numeric: tabular-nums; }
+  .tab:hover { color: var(--ink); border-color: var(--accent); }
+  .tab.active {
+    background: var(--grad);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+  }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ============ 面板骨架 ============ */
+  main { max-width: 1120px; margin: 0 auto; padding: 36px 24px 80px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  @media (prefers-reduced-motion: no-preference) {
+    .panel.active { animation: fadeUp .3s ease-out; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+  .crumb {
+    font-size: 12.5px;
+    letter-spacing: .12em;
+    color: var(--accent-ink);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .panel h2 { font-size: clamp(24px, 3.5vw, 32px); line-height: 1.35; font-weight: 800; margin-bottom: 10px; text-wrap: balance; }
+  .intro { color: var(--muted); max-width: 46em; margin-bottom: 28px; font-size: 15.5px; }
+  .panel h3 { font-size: 18px; font-weight: 700; margin: 34px 0 14px; }
+  .panel h3 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .prose p { max-width: 46em; margin-bottom: 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+
+  /* ============ 通用组件 ============ */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  .pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 99px;
+    line-height: 1.8;
+  }
+  .pill.blue { background: var(--accent-soft); color: var(--accent-ink); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.err { background: var(--err-soft); color: var(--err); }
+  .pill.purple { background: var(--purple-soft); color: var(--purple); }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px 20px;
+    max-width: 52em;
+    margin: 18px 0;
+    font-size: 14.5px;
+  }
+  .callout.warn { background: var(--warn-soft); border-color: var(--warn); }
+
+  .tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); margin: 16px 0; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 640px; }
+  th {
+    text-align: left;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+  tr:last-child td { border-bottom: none; }
+  td b { font-weight: 650; }
+
+  .stat { text-align: center; padding: 22px 16px 18px; }
+  .stat .num { font-size: 34px; font-weight: 800; color: var(--accent-ink); line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .stat .num small { font-size: 15px; }
+  .stat h4 { font-size: 14px; margin: 8px 0 4px; }
+  .stat p { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+  /* 流程步骤 */
+  .flow {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 6px 2px 12px;
+    margin: 16px 0 6px;
+  }
+  .flow .fstep {
+    flex: none;
+    width: 168px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    position: relative;
+    box-shadow: var(--shadow);
+  }
+  .flow .fstep .fn { font-size: 11px; font-weight: 700; color: var(--accent-ink); letter-spacing: .08em; margin-bottom: 4px; }
+  .flow .fstep h5 { font-size: 14px; margin-bottom: 4px; }
+  .flow .fstep p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .flow .fstep.hot { border-color: var(--accent); }
+  .flow .arrow { flex: none; align-self: center; color: var(--muted); font-size: 16px; }
+
+  /* 底部翻页 */
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 48px;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+  .pager button {
+    font-family: inherit;
+    font-size: 13.5px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 10px 18px;
+    cursor: pointer;
+    max-width: 48%;
+    text-align: left;
+  }
+  .pager button:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .pager button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pager button small { display: block; color: var(--muted); font-size: 11.5px; }
+  .pager button:disabled { visibility: hidden; }
+
+  /* 庭审模拟 */
+  .court { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); margin: 20px 0; background: var(--surface); }
+  .court .case { background: var(--surface-2); border-bottom: 1px solid var(--line); padding: 12px 20px; font-size: 13.5px; display: flex; gap: 8px 16px; flex-wrap: wrap; align-items: center; }
+  .court-cols { display: grid; grid-template-columns: 1fr 1fr; }
+  .court-col { padding: 18px 20px; }
+  .court-col + .court-col { border-left: 1px solid var(--line); }
+  .court-col h4 { font-size: 14.5px; margin-bottom: 10px; }
+  .court-col.pros h4 { color: var(--ok); }
+  .court-col.def h4 { color: var(--warn); }
+  .court-col ul { list-style: none; display: grid; gap: 9px; }
+  .court-col li { font-size: 13px; line-height: 1.65; color: var(--muted); padding-left: 10px; border-left: 3px solid var(--ok); }
+  .court-col.def li { border-left-color: var(--warn); }
+  .court-col li b { color: var(--ink); }
+  .verdict { border-top: 1px solid var(--line); background: var(--surface-2); padding: 14px 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; }
+  .vbtn { font-size: 13px; padding: 6px 16px; border-radius: 8px; border: 1.5px solid var(--line); color: var(--muted); background: var(--surface); }
+  .vbtn.yes { border-color: var(--ok); color: var(--ok); font-weight: 700; }
+  @media (max-width: 700px) {
+    .court-cols { grid-template-columns: 1fr; }
+    .court-col + .court-col { border-left: none; border-top: 1px solid var(--line); }
+  }
+
+  /* 色板 */
+  .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 4px; margin-right: 7px; vertical-align: -1px; border: 1px solid rgba(0,0,0,.15); }
+
+  ul.tick { list-style: none; display: grid; gap: 8px; margin: 12px 0; max-width: 48em; }
+  ul.tick li { padding-left: 24px; position: relative; color: var(--muted); font-size: 14px; }
+  ul.tick li::before { content: "✓"; position: absolute; left: 2px; color: var(--accent-ink); font-weight: 700; }
+  ul.tick li b { color: var(--ink); }
+
+  ol.demo { max-width: 48em; margin: 12px 0 12px 22px; display: grid; gap: 8px; font-size: 14px; }
+  ol.demo li { color: var(--muted); }
+  ol.demo li b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">因</div>
+  <h1>CauseLens 因镜 <span>多 Agent 系统的因果排障产品 · 第二周设计交付</span></h1>
+  <div class="meta">2026-08-17 · 通俗版 · 点击下方标签切换 14 项任务</div>
+</div>
+
+<div class="tabbar-wrap"><nav class="tabbar" id="tabbar"></nav></div>
+
+<main id="panels">
+
+<!-- ================= 摘要 ================= -->
+<section class="panel" data-tab="方案摘要" data-num="总览">
+  <div class="crumb">方案摘要 · 一页看懂</div>
+  <h2>当多个 AI 协作的系统出了事故,因镜告诉你:最早哪一步出的错、证据是什么、怎么防止再犯</h2>
+  <p class="intro">越来越多的公司让多个 AI 助手(Agent)接力干活:一个规划、一个查订单、一个执行退款……出了事故后,<b>最后报错的地方往往不是真正出错的地方</b>。现有工具只会把几百条执行记录摆出来让人自己翻;因镜直接给出「首故障点 + 完整证据 + 验证办法」。</p>
+
+  <h3>核心流程</h3>
+  <div class="flow">
+    <div class="fstep"><div class="fn">START</div><h5>事故触发</h5><p>告警 / 低分 / 客诉自动立案</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep"><div class="fn">01</div><h5>事故列表</h5><p>同类失败自动归堆、按影响排序</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep hot"><div class="fn">02</div><h5>诊断工作台</h5><p>首故障点 + 前三候选原因 + 证据</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep"><div class="fn">03</div><h5>对比验证</h5><p>与一次成功执行做差异对比</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep hot"><div class="fn">04</div><h5>根因庭审</h5><p>AI 控辩对质,人来裁决</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep"><div class="fn">05</div><h5>转成防线</h5><p>一键生成升级前的自动检查</p></div>
+  </div>
+
+  <h3>三个差异化要点(对比竞品 AgentLoop)</h3>
+  <div class="grid3">
+    <div class="card"><span class="pill blue">差异 1</span><h3 style="margin:10px 0 6px">诊断工作台替代五视图切换</h3><p class="muted small">打开事故直接看到「症状 → 候选原因 → 证据 → 验证动作」,不用在五种视图之间来回找。</p></div>
+    <div class="card"><span class="pill blue">差异 2</span><h3 style="margin:10px 0 6px">证据卡片替代文本总结</h3><p class="muted small">AI 的每条结论必须附上可点击核对的原始记录,并同时给出反面证据和可信度。</p></div>
+    <div class="card"><span class="pill blue">差异 3</span><h3 style="margin:10px 0 6px">三步闭环替代跨模块跳转</h3><p class="muted small">从发现问题到生成防线,主要操作不超过三次:打开事故 → 裁决 → 转用例。</p></div>
+  </div>
+
+  <div class="callout"><b>创新亮点「根因庭审」:</b>AI 同时扮演控方(论证原因成立)与辩方(专职找反证),用户当法官裁决。用对抗式呈现对冲 AI 幻觉和人的「看到高可信度就直接信」,裁决结果反过来训练系统。详见任务 14。</div>
+  <div class="callout warn"><b>最大风险:</b>诊断误报导致信任崩塌。缓解:确定性规则先行、证据强制引用、把握不大就降级为「线索」、裁决反馈持续校准。详见任务 13。</div>
+</section>
+
+<!-- ================= 任务 1 ================= -->
+<section class="panel" data-tab="核心流程设计" data-num="01">
+  <div class="crumb">任务 1 / 14</div>
+  <h2>核心流程设计</h2>
+  <p class="intro">主流程覆盖「从问题被发现,到同类问题不再复发」的完整闭环,共 8 个步骤。每一步都明确:用户拿到什么、要做什么判断、产出什么。</p>
+
+  <h3>主流程 8 步</h3>
+  <div class="tblwrap"><table>
+    <tr><th>步骤</th><th>系统给你什么</th><th>你要做的判断</th><th>产出</th></tr>
+    <tr><td><b>1 触发</b></td><td>告警、AI 评分过低或客诉自动立案</td><td>无(系统自动)</td><td>新事故记录,自动归入同类失败堆</td></tr>
+    <tr><td><b>2 浏览事故</b></td><td>事故列表 + 同类失败归堆</td><td>先处理哪一堆(按影响排序辅助)</td><td>选中一个事故</td></tr>
+    <tr><td><b>3 看诊断</b></td><td>最早出错的一步 + 前三候选原因 + 可信度</td><td>是否采信、先看哪条证据</td><td>知道「哪一步先出的错」</td></tr>
+    <tr><td><b>4 查证据</b></td><td>证据卡片(可点回原始记录)+ 反面证据</td><td>证据是否充分</td><td>形成自己的判断</td></tr>
+    <tr><td><b>5 比差异</b></td><td>这次失败 vs 一次成功执行的并排对比</td><td>差异能否解释失败</td><td>确认或排除候选原因</td></tr>
+    <tr><td><b>6 裁决</b></td><td>控方论证 + 辩方反证并排呈现</td><td><b>成立 / 不成立 / 证据不足</b>(必选)</td><td>裁决记录 + 系统校准信号</td></tr>
+    <tr><td><b>7 转用例</b></td><td>裁决成立的事故自动打包成检查项</td><td>归入哪个检查集</td><td>一条升级前自动检查(回归用例)</td></tr>
+    <tr><td><b>8 门禁</b></td><td>新版本上线前自动重跑所有检查</td><td>出现警告后是否放行</td><td>发布检查报告</td></tr>
+  </table></div>
+
+  <h3>信息架构:7 个页面 <small>与竞品的根本差异:按「排障思路的推进」组织,不按「数据类型」组织</small></h3>
+  <div class="grid2">
+    <div class="card"><b>① 总览 / 事故列表</b><span class="pill blue" style="margin-left:8px">默认落地页</span><p class="muted small">同类失败归堆卡 + 事故列表(可按助手、时间、状态、可信度筛选)</p></div>
+    <div class="card"><b>② 诊断工作台</b><span class="pill blue" style="margin-left:8px">核心页面</span><p class="muted small">症状区、候选原因区、证据抽屉、因果路径小图、底部可展开完整记录</p></div>
+    <div class="card"><b>③ 成功 / 失败对比</b><p class="muted small">数据状态、交接内容、工具参数三个维度并排对比</p></div>
+    <div class="card"><b>④ 根因庭审</b><span class="pill purple" style="margin-left:8px">创新点</span><p class="muted small">控方 / 辩方并排 + 法官裁决区</p></div>
+    <div class="card"><b>⑤ 回归集与门禁</b><p class="muted small">检查项列表 + 发布前运行报告(通过 / 警告 / 阻断)</p></div>
+    <div class="card"><b>⑥ 接入与采集体检</b><p class="muted small">接入引导 + 数据质量体检(覆盖率 / 断链 / 重复 / 隐私)</p></div>
+    <div class="card" style="grid-column: 1 / -1;"><b>⑦ 设置</b><p class="muted small">项目隔离、成员权限、隐私脱敏策略、告警规则</p></div>
+  </div>
+</section>
+
+<!-- ================= 任务 2 ================= -->
+<section class="panel" data-tab="页面设计稿" data-num="02">
+  <div class="crumb">任务 2 / 14</div>
+  <h2>Demo 输出:7 个页面的设计稿</h2>
+  <p class="intro">每个页面都规定了「第一眼要素」——打开页面 3 秒内必须看到的结论性信息,落实「结论先行」的设计原则。以下每张卡对应一份设计稿,也对应可点击原型中的一个页面。</p>
+  <div class="grid2">
+    <div class="card">
+      <b>① 事故列表</b><span class="pill blue" style="margin-left:8px">落地页</span>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>值班第一屏回答「今天最该先处理哪类失败」。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>最严重的失败堆(红色计数 + 趋势箭头)及其最可信的诊断摘要。</p>
+      <p class="muted small"><b class="muted">主操作:</b>点击事故行进入工作台;点堆卡则筛选列表(可用性走查后改的,见任务 10)。</p>
+    </div>
+    <div class="card">
+      <b>② 诊断工作台</b><span class="pill blue" style="margin-left:8px">核心页</span>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>一屏回答「哪一步先出的错、证据是什么、下一步怎么验证」。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>报错位置 + 排名第一的候选原因(一句话结论 + 可信度,默认展开)。</p>
+      <p class="muted small"><b class="muted">主操作:</b>展开候选 → 阅读证据 → 进入庭审。完整执行记录默认折叠,按需展开。</p>
+    </div>
+    <div class="card">
+      <b>③ 成功 / 失败对比</b>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>回答「和正常的那次差在哪」,差异直接关联到证据。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>对比对象怎么选的(同版本 / 同任务 / 时间接近)+ 三个维度各有几处差异。</p>
+      <p class="muted small"><b class="muted">主操作:</b>确认差异后进入庭审;可手动更换对比对象。</p>
+    </div>
+    <div class="card">
+      <b>④ 根因庭审</b><span class="pill purple" style="margin-left:8px">创新</span>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>对候选原因做出必选裁决,同时对冲 AI 幻觉与人的轻信。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>左右分栏的控方 / 辩方——3 秒内知道「这里要我做判断,且存在反对意见」。</p>
+      <p class="muted small"><b class="muted">主操作:</b>三选一裁决;裁决后一键转检查项或发起改判。</p>
+    </div>
+    <div class="card">
+      <b>⑤ 回归集与门禁</b>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>让裁决过的事故变成发版防线,回答「这次能不能放行」。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>门禁结论大字(通过 / 警告 / 阻断)+ 三种结果的计数。</p>
+      <p class="muted small"><b class="muted">主操作:</b>查看警告明细;可推送到团队现有工具、调整门禁松紧。</p>
+    </div>
+    <div class="card">
+      <b>⑥ 接入与采集体检</b>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>回答「我的数据可不可信」,每个问题都配可执行的修复动作。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>四项体检得分卡,异常项用警告色突出。</p>
+      <p class="muted small"><b class="muted">主操作:</b>展开修复指引(含可直接复制的代码);体检每小时自动运行。</p>
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <b>⑦ 设置</b>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>项目隔离、角色权限(查看者 / 分析师 / 裁决人三档)、隐私脱敏、告警规则、门禁模式集中管理。<b class="muted">第一眼:</b>成员角色表——谁有权裁决一目了然。第一期不做的功能显示禁用态并注明,不假装可用。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 任务 3 ================= -->
+<section class="panel" data-tab="产品方案说明" data-num="03">
+  <div class="crumb">任务 3 / 14</div>
+  <h2>产品方案说明:为什么做、解决什么、怎么解决</h2>
+
+  <h3>为什么做:谁在痛,代价是什么</h3>
+  <div class="prose">
+    <p>运行多 Agent 系统的团队(AI 平台负责人、Agent 负责人、值班运维)面临一个具体困境:<b>最后报错的节点不是根因节点</b>。上游助手写入了过期数据、交接时丢了字段、记忆里存了脏数据,错误沿着链路放大,最后在某个下游环节爆掉。现有工具能把几百条记录完整展示,但「哪一步先出的错、为什么」仍然要人翻着看。</p>
+    <p>代价可量化:一次跨助手事故平均要占用资深工程师<b>半天到两天</b>;故障影响时间拉长;经验沉在个人聊天记录里,同类问题反复踩坑。</p>
+  </div>
+
+  <h3>解决什么问题</h3>
+  <div class="callout">为【运行多 Agent 生产系统的平台团队与运维】在【生产事故排查】情境下,解决【报错位置不等于出错位置、证据散落难以定位】的问题,通过【首故障点定位 + 证据化诊断 + 成功失败对比 + 裁决闭环】实现【修复更快、同类问题不复发、修复可验证】。</div>
+
+  <h3>三个可衡量的价值指标</h3>
+  <div class="grid3">
+    <div class="card stat"><div class="num">≥70<small>%</small></div><h4>定位命中率</h4><p>真正的病根出现在系统给出的前三个候选里</p></div>
+    <div class="card stat"><div class="num">≥60<small>%</small></div><h4>证据接受率</h4><p>用户裁决「成立」的比例</p></div>
+    <div class="card stat"><div class="num">≤10<small>分钟</small></div><h4>处置速度</h4><p>打开事故到生成检查项,主操作 ≤ 3 次</p></div>
+  </div>
+
+  <h3>怎么解决:五层机制 <small>讲给不懂技术的人</small></h3>
+  <div class="tblwrap"><table>
+    <tr><th>层</th><th>做什么</th><th>打个比方</th></tr>
+    <tr><td><b>1 数据层</b></td><td>用标准探针记录每个 AI 助手做了什么:调了哪个模型、用了哪个工具、读写了什么、交接给谁</td><td>给整条流水线装监控摄像头</td></tr>
+    <tr><td><b>2 因果层</b></td><td>把记录连成因果图:谁写的数据被谁读了、谁的输出成了谁的输入</td><td>摄像头拍画面,因果图画「谁碰了谁」</td></tr>
+    <tr><td><b>3 证据层</b></td><td>格式错、字段丢、数据过期这类确定性问题用规则直接判定;语义问题才交给模型,且<b>说不出证据的结论不许上屏</b></td><td>先用规则抓现行,再用模型断疑案</td></tr>
+    <tr><td><b>4 裁决层</b></td><td>把「成立的理由」和「不成立的反证」摆在一起,工程师裁决;裁对裁错都被记录,系统越用越准</td><td>AI 起诉,人拍板</td></tr>
+    <tr><td><b>5 资产层</b></td><td>裁决成立的事故一键变成检查项,下次发版前自动重跑</td><td>裁过的案子变成防线</td></tr>
+  </table></div>
+</section>
+
+<!-- ================= 任务 4 ================= -->
+<section class="panel" data-tab="差异化设计" data-num="04">
+  <div class="crumb">任务 4 / 14</div>
+  <h2>差异化设计落地:五个可感知的不同</h2>
+  <p class="intro">第一周研究选定的主方向是「因果优先的调试器」。下面五条差异全部落到了具体设计,每条都能在原型里指认位置。</p>
+  <div class="tblwrap"><table>
+    <tr><th>#</th><th>竞品 AgentLoop 的现状与不足</th><th>因镜的具体设计</th><th>用户第一眼的不同</th></tr>
+    <tr><td>1</td><td>五种执行记录视图,信息完整但来回切换,没有统一的诊断答案</td><td><b>诊断工作台</b>为核心页:症状、前三候选、因果路径、证据入口集中一屏;完整记录降级为按需展开</td><td>打开事故先看到「结论候选」,而不是一棵几百节点的树</td></tr>
+    <tr><td>2</td><td>AI 输出偏「热点识别 + 评分文本」,不强制给证据</td><td><b>证据卡片</b>:每条结论挂支持证据与反证,可一键点回原始记录;无证据的结论不允许显示</td><td>AI 说的每句话都能点进去验证,还主动给出「反对自己」的证据</td></tr>
+    <tr><td>3</td><td>只能看单条执行,「和正常的差在哪」靠人脑记</td><td><b>成功 / 失败对比</b>:自动找同类成功执行,按数据、交接、工具三维并排对比,差异高亮</td><td>像看代码改动对比一样看两次执行的差异</td></tr>
+    <tr><td>4</td><td>接入步骤长、失败无提示、采集漏了也不知道</td><td><b>接入体检</b>:接入后自动出报告——覆盖率、断链、重复、隐私,每项附一键修复指引</td><td>接完就知道「数据可不可信」,不用等排障时才发现漏采</td></tr>
+    <tr><td>5</td><td>闭环功能齐全但跨模块操作多、字段靠人工搬</td><td><b>三步闭环</b>:打开事故(1)→ 庭审裁决(2)→ 转检查项(3),字段全自动填充</td><td>从「看到问题」到「防住问题」三次点击</td></tr>
+  </table></div>
+</section>
+
+<!-- ================= 任务 5 ================= -->
+<section class="panel" data-tab="PRD" data-num="05">
+  <div class="crumb">任务 5 / 14</div>
+  <h2>PRD:功能、流程、边界</h2>
+  <p class="intro">产品拆为 7 个模块。P0 = 第一期必须做;P1 = 第一期争取做。每个模块都写明了「不做什么」——边界和功能一样重要。</p>
+
+  <div class="tblwrap"><table>
+    <tr><th>模块</th><th>优先级</th><th>一句话职责</th><th>关键边界(明确不做)</th><th>代表验收标准</th></tr>
+    <tr><td><b>M1 接入与采集体检</b></td><td><span class="pill err">P0</span></td><td>数据进得来,且知道数据可不可信</td><td>不做通用监控;第一期只支持 3 个主流框架;隐私扫描只提示不自动删改</td><td>接入后 5 分钟内出体检报告;人为制造问题能被检出</td></tr>
+    <tr><td><b>M2 事故列表与失败归堆</b></td><td><span class="pill err">P0</span></td><td>从海量执行里知道先看哪个</td><td>不做自定义数据分析(那是报表工具的事)</td><td>同类失败归到同一堆的比例 ≥ 80%;万条数据下首屏 ≤ 2 秒</td></tr>
+    <tr><td><b>M3 因果诊断工作台</b></td><td><span class="pill err">P0</span></td><td>回答「哪一步先出的错、为什么」</td><td>不自动修复、不自动定责;可信度低于四成的降级为「线索」;候选最多 3 条</td><td>前三命中率 ≥ 70%;每条结论 100% 带可点击证据</td></tr>
+    <tr><td><b>M4 成功 / 失败对比</b></td><td><span class="pill err">P0</span></td><td>回答「和正常的差在哪」</td><td>找不到可比对象时明说并允许跳过,不硬凑;超大字段只比摘要</td><td>自动推荐的对比对象采用率 ≥ 80%;已知差异 100% 检出</td></tr>
+    <tr><td><b>M5 根因庭审</b></td><td><span class="pill err">P0</span></td><td>人拍板,AI 被校准</td><td>裁决不可跳过;仅「裁决人」角色可裁决</td><td>反方区 100% 有内容(找不到反证就明说);改判保留历史</td></tr>
+    <tr><td><b>M6 回归用例与发布门禁</b></td><td><span class="pill warn">P1</span></td><td>裁过的案子变成防线</td><td>不做完整发布系统,只提供命令行与推送接口;回放用录制数据,不真实调用外部系统</td><td>转用例 ≤ 2 步且字段自动填充;注入已知问题门禁能报警</td></tr>
+    <tr><td><b>M7 设置与权限</b></td><td><span class="pill warn">P1</span></td><td>项目隔离、谁能裁决、隐私脱敏</td><td>第一期不做企业单点登录与审计导出</td><td>三档角色权限逐条验证;脱敏后原文不落库</td></tr>
+  </table></div>
+
+  <div class="callout">每个模块的完整用户故事、输入输出与全部验收标准见原文档任务 5 章节;此处为通俗摘要。</div>
+</section>
+
+<!-- ================= 任务 6 ================= -->
+<section class="panel" data-tab="异常流程" data-num="06">
+  <div class="crumb">任务 6 / 14</div>
+  <h2>异常流程补全:出错的时候,系统怎么办</h2>
+  <p class="intro">排障工具最怕「装懂」。14 种异常情况逐一设计了应对,统一原则:<b>不编造、不硬猜、明说局限、给出恢复路径</b>。</p>
+
+  <h3>数据侧 <small>采集到的数据本身有问题</small></h3>
+  <div class="tblwrap"><table>
+    <tr><th>异常</th><th>系统怎么办</th><th>用户看到什么</th></tr>
+    <tr><td><b>记录断链</b>(部分记录接不上)</td><td>按时间和会话智能拼接,拼上的打「推测」标记,拼不上的单独放</td><td>「该链路存在 2 处断链,因果分析可能不完整。查看修复指引 →」</td></tr>
+    <tr><td><b>重复采集</b>(同一事件采了两次)</td><td>自动去重,保留信息更全的一条,原始都留档</td><td>「检测到重复采集,已自动去重,建议移除重复接入点」</td></tr>
+    <tr><td><b>关键字段缺失</b></td><td>相关分析自动禁用,不硬猜</td><td>「缺少状态变更数据,无法进行此项分析。补齐方法 →」</td></tr>
+    <tr><td><b>超大记录</b>(上千节点)</td><td>聚合展示、按需加载,页面不卡死</td><td>「该链路较大(1,842 节点),已聚合展示,点击展开」</td></tr>
+    <tr><td><b>含隐私数据</b></td><td>采集端先打码,服务端兜底,拦截情况计入体检</td><td>「本项目上周拦截 37 处敏感字段,查看脱敏策略 →」</td></tr>
+  </table></div>
+
+  <h3>诊断侧 <small>系统分析不出来的时候</small></h3>
+  <div class="tblwrap"><table>
+    <tr><th>异常</th><th>系统怎么办</th><th>用户看到什么</th></tr>
+    <tr><td><b>找不到候选原因</b></td><td>不编造结论,展示相似历史事故及其当年的裁决供参考</td><td>「暂未定位到候选根因。以下是 3 条相似历史事故与其裁决结论」</td></tr>
+    <tr><td><b>把握都不大</b>(可信度全部低于四成)</td><td>降级为「线索」并折叠,不允许进庭审</td><td>「以下为低置信度线索,仅供参考,不建议直接采信」</td></tr>
+    <tr><td><b>证据互相矛盾</b></td><td>标记「证据冲突」,强制人工裁决,矛盾证据置顶并排</td><td>「该候选存在相互矛盾的强证据,请人工裁决」</td></tr>
+    <tr><td><b>AI 分析超时</b></td><td>确定性判定照常显示,页面不干等,提供重试</td><td>「语义分析暂不可用(已重试 2 次),确定性判定不受影响。重试 →」</td></tr>
+    <tr><td><b>找不到可比的成功执行</b></td><td>明说没有,允许放宽条件手选或跳过,不硬凑</td><td>「未找到满足条件的可比成功链。可放宽条件手动选择,或跳过对比」</td></tr>
+  </table></div>
+
+  <h3>用户侧 <small>人的操作出状况的时候</small></h3>
+  <div class="tblwrap"><table>
+    <tr><th>异常</th><th>系统怎么办</th><th>用户看到什么</th></tr>
+    <tr><td><b>裁决裁错了想改</b></td><td>支持改判,完整历史保留,由此生成的检查项标「待复核」</td><td>「改判成功。由此生成的回归用例已标记待复核」</td></tr>
+    <tr><td><b>两人同时裁决</b></td><td>后提交者看到先裁决的结果,选择附议或改判,不静默覆盖</td><td>「张工 2 分钟前已裁决为『成立』。你可以附议或发起改判」</td></tr>
+    <tr><td><b>没有裁决权限</b></td><td>按钮置灰但不隐藏(让用户知道功能存在),悬浮说明如何开通</td><td>「裁决需要『裁决人』权限,可联系项目管理员开通」</td></tr>
+    <tr><td><b>新项目空空如也</b></td><td>展示三步接入引导;有数据没事故时展示「一切正常」</td><td>「还没有数据。三步完成接入:①装 SDK ②配环境变量 ③跑一次」</td></tr>
+  </table></div>
+</section>
+
+<!-- ================= 任务 7 ================= -->
+<section class="panel" data-tab="可点击原型" data-num="07">
+  <div class="crumb">任务 7 / 14</div>
+  <h2>可点击原型</h2>
+  <p class="intro">原型文件 <b>agent-tracing-prototype.html</b>:单文件、离线双击可开、真实可点。当前版本 v1.2,已包含可用性走查后的迭代和全部微交互动效。</p>
+
+  <h3>演示用模拟案例</h3>
+  <div class="card prose" style="max-width: 56em;">
+    <p>「订单助手」多 Agent 客服系统由 5 个角色接力:<b>规划 → 查订单 → 查资料 / 记忆 → 执行退款 → 发通知</b>。</p>
+    <p>核心事故:用户申请退款 ¥180,退款环节(第 9 步)调用接口被拒。<b>表面报错</b>在第 9 步;<b>真实根因</b>在第 3 步——查资料的助手读到了一份 <b>4 小时前的过期快照</b>(写着可退 ¥180),而订单真实状态是已部分退款、只剩 ¥60 可退。过期数据一路传递,最终导致超额退款请求被拒。</p>
+  </div>
+
+  <h3>演示路径(原型顶部有同款引导,步骤编号可点击直达)</h3>
+  <ol class="demo">
+    <li><b>事故列表</b>:点「过期状态污染」堆卡筛选定位 → 点开事故 INC-2026-0814-003;</li>
+    <li><b>诊断工作台</b>:先看到规则判定的候选与「语义分析中」加载态(约 1 秒后 AI 候选渐入,演示「规则先行、模型异步」)→ 展开证据,点击证据跳回原始记录(持久高亮);</li>
+    <li><b>成功 / 失败对比</b>:与一次成功执行做三维差异对比;</li>
+    <li><b>根因庭审</b>:控方 4 条证据 vs 辩方 2 条反证 → 裁决「成立」(落定动效);</li>
+    <li><b>转检查项</b>:自动生成 REG-1041(含期望规则,新行高亮滑入)→ 门禁页看运行结果;</li>
+    <li><b>接入体检</b>:覆盖率 / 断链 / 重复 / 隐私四项报告。</li>
+  </ol>
+
+  <h3>异常状态也做进了原型</h3>
+  <ul class="tick">
+    <li><b>断链警告</b>:体检页展示断链位置与修复指引;</li>
+    <li><b>低可信线索</b>:工作台候选 3 折叠为「线索」,庭审入口禁用;</li>
+    <li><b>权限不足</b>:设置页「邀请成员」显示禁用态并注明原因;</li>
+    <li><b>快照过期提示</b>:门禁页 REG-1015 标注录制时间过久。</li>
+  </ul>
+  <p class="muted small">原则:不可用的功能一律显示禁用态并注明原因,不假装可点。</p>
+</section>
+
+<!-- ================= 任务 8 ================= -->
+<section class="panel" data-tab="技术方案草图" data-num="08">
+  <div class="crumb">任务 8 / 14</div>
+  <h2>技术方案草图</h2>
+  <p class="intro">承接第一周推荐架构,细化到接口与字段。这里给通俗版:数据像流水一样经过四段处理,最后到达用户界面。</p>
+
+  <h3>数据流四段</h3>
+  <div class="flow">
+    <div class="fstep"><div class="fn">STAGE 1</div><h5>采集端</h5><p>三个主流框架的适配器 + 标准探针;隐私数据在离开用户系统前先打码</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep"><div class="fn">STAGE 2</div><h5>接入与存储</h5><p>接入网关 + 消息队列;原始事件与分析数据分开存放</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep hot"><div class="fn">STAGE 3</div><h5>诊断引擎</h5><p>因果图构建 → 规则引擎 + AI 轨迹分析 → 证据排序,产出诊断结果</p></div>
+    <div class="arrow">→</div>
+    <div class="fstep"><div class="fn">STAGE 4</div><h5>应用层</h5><p>工作台 / 对比 / 庭审 / 门禁界面;裁决结果回流校准诊断引擎</p></div>
+  </div>
+
+  <h3>核心分工:规则引擎 vs AI 模型</h3>
+  <div class="tblwrap"><table>
+    <tr><th></th><th>规则 / 不变量引擎</th><th>AI 轨迹评估模型</th></tr>
+    <tr><td><b>什么时候跑</b></td><td>先跑,毫秒级,结果立即上屏</td><td>后跑,秒级,异步追加,超时不阻塞页面</td></tr>
+    <tr><td><b>管什么问题</b></td><td>确定性问题:格式校验、必填字段、数据过期、数值约束</td><td>语义问题:候选排序、替代解释、反证搜集、「答案看着对但业务上错了」</td></tr>
+    <tr><td><b>输出标签</b></td><td><span class="pill ok">规则判定</span> 可信度按规则强度给固定值</td><td><span class="pill purple">模型推断</span> 必须附结构化证据引用,否则丢弃</td></tr>
+  </table></div>
+  <p class="muted small" style="max-width:48em">调用时序:事故创建 → 因果图构建(1 秒内)→ 规则引擎先返回并渲染页面 → AI 分析异步追加 → 用户裁决 → 裁决写入校准日志 → 每周用裁决数据校准规则阈值与模型参数。</p>
+
+  <h3>接口与数据结构 <small>面向工程实现,通俗版只列清单</small></h3>
+  <div class="grid2">
+    <div class="card"><b>8 个核心接口</b><p class="muted small" style="margin-top:6px">数据接入、体检报告、事故列表、诊断结果、成功失败对比、提交裁决(含并发冲突处理)、转检查项、门禁运行。完整请求 / 响应字段见原文档 8.2 节。</p></div>
+    <div class="card"><b>两套存储</b><p class="muted small" style="margin-top:6px">观测数据(执行记录、状态 / 交接 / 记忆事件)存分析型数据库 ClickHouse;业务数据(事故、诊断、裁决、检查项)存 Postgres。字段级定义见原文档 8.3 节。关键设计:<b>证据表的「原始记录引用」为必填——没有引用的证据存不进去</b>。</p></div>
+  </div>
+</section>
+
+<!-- ================= 任务 9 ================= -->
+<section class="panel" data-tab="测试用例设计" data-num="09">
+  <div class="crumb">任务 9 / 14</div>
+  <h2>测试用例设计</h2>
+  <p class="intro">共 33 条测试用例,覆盖正向流程、全部 14 种异常、边界条件,外加 5 条「诊断质量专项」——后者直接守住产品的核心承诺。</p>
+
+  <div class="grid3">
+    <div class="card stat"><div class="num">9</div><h4>正向流程用例</h4><p>接入、归堆、诊断、证据跳转、对比、裁决、转用例、门禁、三步闭环</p></div>
+    <div class="card stat"><div class="num">12</div><h4>异常流程用例</h4><p>与任务 6 的异常清单逐条对应</p></div>
+    <div class="card stat"><div class="num">7 + 5</div><h4>边界 + 质量专项</h4><p>空数据、十万级数据、并发、越权访问 + 诊断质量跑批</p></div>
+  </div>
+
+  <h3>抽几条有代表性的</h3>
+  <div class="tblwrap"><table>
+    <tr><th>编号</th><th>验证什么</th><th>通过标准</th><th>优先级</th></tr>
+    <tr><td>TC-04</td><td>逐条点击所有证据引用</td><td>每条都跳到正确的原始记录,无死链</td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TC-09</td><td>干净环境走通「发现 → 诊断 → 裁决 → 转用例」全流程</td><td>主要操作 ≤ 3 次</td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TC-14</td><td>输入含手机号 / 密钥的数据</td><td>原文不落库;界面显示打码;体检记录拦截数</td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TC-15</td><td>注入系统判定不了的事故</td><td>显示「暂未定位」+ 相似历史;<b>无编造结论</b></td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TC-26</td><td>直接用网址访问无权限项目的事故</td><td>拒绝访问,且不泄露该事故是否存在</td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TQ-01</td><td>诊断质量跑批:30–50 条已知病根的事故集</td><td>前三命中率 ≥ 70%,第一名命中率 ≥ 45%</td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TQ-02</td><td>证据引用完整性:遍历全部上屏结论</td><td>100% 有可点击的真实引用</td><td><span class="pill err">P0</span></td></tr>
+    <tr><td>TQ-03</td><td>可信度是否「言行一致」</td><td>标高可信的候选,实际裁决成立率也显著更高</td><td><span class="pill warn">P1</span></td></tr>
+  </table></div>
+</section>
+
+<!-- ================= 任务 10 ================= -->
+<section class="panel" data-tab="可用性测试" data-num="10">
+  <div class="crumb">任务 10 / 14</div>
+  <h2>可用性测试:3 种画像走查与迭代</h2>
+  <div class="callout warn"><b>方法诚实声明:</b>本轮是「3 种用户画像的专家认知走查」,不是真人实测——本期条件下无法招募外部受测者。局限(走查者非真实用户、无真实耗时数据)明确记录,真人实测已列入第三周计划。</div>
+
+  <h3>三个走查视角 × 五个任务</h3>
+  <div class="grid3">
+    <div class="card"><b>走查 A · Agent 开发者</b><p class="muted small" style="margin-top:6px">维护退款助手,日常改提示词和工具编排。关注:证据能不能核实、裁决是否可靠。</p></div>
+    <div class="card"><b>走查 B · 值班运维</b><p class="muted small" style="margin-top:6px">管多个业务的告警,第一次用本产品。关注:最快找到该先处理什么、操作不迷路。</p></div>
+    <div class="card"><b>走查 C · 测试工程师</b><p class="muted small" style="margin-top:6px">负责发布质量。关注:转用例是否省事、门禁结果可不可操作。</p></div>
+  </div>
+  <p class="muted small" style="margin-top:10px">五个任务覆盖三步闭环 + 两个异常态:找首故障点、验证证据跳转、走通裁决转用例、判断数据可信度、解释低可信线索为何禁用。</p>
+
+  <h3>发现 7 个问题,当期修复 4 个</h3>
+  <div class="tblwrap"><table>
+    <tr><th>#</th><th>问题</th><th>严重度</th><th>处理</th></tr>
+    <tr><td>P-1</td><td>堆卡片点击直接跳转工作台,与「筛选」的预期不符(2 人遇到)</td><td><span class="pill err">严重</span></td><td><span class="pill ok">已修复</span> 改为筛选 + 滚动定位;进入工作台收敛为点事故行</td></tr>
+    <tr><td>P-2</td><td>证据跳转的高亮 1.6 秒后消失,回看时找不到定位行</td><td><span class="pill warn">一般</span></td><td><span class="pill ok">已修复</span> 改为持久高亮(像划重点),到下一次定位才转移</td></tr>
+    <tr><td>P-3</td><td>门禁「建议升级为阻断」没有操作入口</td><td><span class="pill warn">一般</span></td><td><span class="pill ok">已修复</span> 明细行内直接加「调整门禁模式 →」链接</td></tr>
+    <tr><td>P-4</td><td>可信度百分比诱发「不看反证直接采信」</td><td><span class="pill err">严重</span></td><td><span class="pill blue">本期不改</span> 庭审强制并排反证已是首层防线;改成「高中低」三档影响面大,留待真人实测定夺</td></tr>
+    <tr><td>P-5</td><td>裁决按钮没有二次确认,怕手滑</td><td><span class="pill blue">建议</span></td><td><span class="pill blue">不改</span> 改判机制已兜底;二次确认会降低裁决量,伤校准</td></tr>
+    <tr><td>P-6</td><td>「证据不足」生成的待补清单提交后无处回看</td><td><span class="pill warn">一般</span></td><td><span class="pill blue">本期不改</span> 需新增持久化页面,记入后续需求</td></tr>
+    <tr><td>P-7</td><td>引导文字长,关掉后不知道下一步去哪</td><td><span class="pill warn">一般</span></td><td><span class="pill ok">部分修复</span> 引导步骤编号改为可点击直达</td></tr>
+  </table></div>
+  <p class="muted small" style="max-width:48em">走查者原话:「证据能点进去这点比我们现在的工具强,但跳过去之后得让我找得到回来的路。」「86% 摆在那我就不想看反方了——这数字劝人偷懒。」「让我升级阻断就给我个按钮,别让我自己去翻设置。」</p>
+</section>
+
+<!-- ================= 任务 11 ================= -->
+<section class="panel" data-tab="微交互设计" data-num="11">
+  <div class="crumb">任务 11 / 14</div>
+  <h2>微交互与情感化设计</h2>
+  <p class="intro">设计目标只有一个:<b>让用户信任诊断结论</b>。所有动效服务于「确定感」与「克制感」,不做装饰性动画;时长 150–400 毫秒,不阻塞操作,并尊重系统的「减弱动效」设置。</p>
+
+  <h3>品牌语气</h3>
+  <div class="callout">像一位可靠的资深工程师:<b>不夸张、不卖萌、每句话可验证。</b>成功文案说明「系统做了什么 + 对你意味着什么」;错误文案必须带恢复路径;空状态给三步可执行引导,不放插画卖萌。</div>
+  <p class="prose" style="max-width:48em">视觉方向是「调查案卷」:产品隐喻本就是庭审、证据、判例,界面做成一份摊开的档案——暖纸底、深墨棕框架、衬线标题传达公文感。<b>框架层不占用彩色,彩色只留给语义</b>——颜色一旦出现即有含义,与「无证据的结论不上屏」是同一个理念。</p>
+
+  <h3>色彩语义(与证据体系绑定,全站一致)</h3>
+  <div class="tblwrap"><table>
+    <tr><th>色</th><th>语义</th><th>用在哪</th></tr>
+    <tr><td><span class="swatch" style="background:#3e2f1b"></span>墨棕</td><td>框架 / 可执行动作(只表达「可操作」,不表达语义)</td><td>主按钮、链接、导航</td></tr>
+    <tr><td><span class="swatch" style="background:#8f2620"></span>印章红</td><td>裁决已盖章生效(签名元素专用)</td><td>「成立」印章、键盘焦点框</td></tr>
+    <tr><td><span class="swatch" style="background:#67701e"></span>规则橄榄绿</td><td>确定性 / 规则判定 / 支持证据</td><td>规则标签、支持证据边条</td></tr>
+    <tr><td><span class="swatch" style="background:#9c6d08"></span>警示金</td><td>反证 / 警告 / 待处理 / 首故障点</td><td>辩方、门禁警告、⚑ 标记</td></tr>
+    <tr><td><span class="swatch" style="background:#bb3524"></span>错误红</td><td>报错事实(仅陈述事实,不渲染情绪)</td><td>报错点、错误码</td></tr>
+    <tr><td><span class="swatch" style="background:#8f4f96"></span>模型紫</td><td>AI 推断(提示不确定性高于规则)</td><td>模型标签、语义分析加载态</td></tr>
+    <tr><td><span class="swatch" style="background:#f5e5ad"></span>荧光标记黄</td><td>定位 / 划重点</td><td>证据跳转的持久高亮</td></tr>
+  </table></div>
+
+  <h3>六个关键情感节点</h3>
+  <div class="tblwrap"><table>
+    <tr><th>节点</th><th>动效形式</th><th>传达什么</th></tr>
+    <tr><td><b>诊断加载中</b></td><td>规则候选立即出现;AI 候选带「语义分析中」加载条,约 1 秒后渐入</td><td>「确定的部分已经给你了,不确定的部分我不装快」——把技术时序变成可感知的诚实感</td></tr>
+    <tr><td><b>裁决成立</b></td><td>「成立」印章 320 毫秒盖章动效(缩放 + 微倾压到位)——产品的视觉签名</td><td>落槌与盖章的落定感,与「写入判例库」的分量匹配</td></tr>
+    <tr><td><b>裁决驳回</b></td><td>仅一个安静的弹窗请求理由;无红色闪烁、无惩罚性动效</td><td>驳回 AI 是正常且有价值的行为,不该有「出错了」的情绪暗示</td></tr>
+    <tr><td><b>检查项生成</b></td><td>新行滑入 + 高亮定格;不放庆祝弹窗</td><td>防线增加了,这是日常工作不是节日</td></tr>
+    <tr><td><b>门禁警告</b></td><td>「警告」大字单次脉冲,不循环、不闪烁</td><td>克制提醒而非警报——警告默认不阻断,动效强度与之匹配</td></tr>
+    <tr><td><b>首次引导</b></td><td>引导横幅步骤编号可点击直达;可随时关闭</td><td>被引路而非被说教</td></tr>
+  </table></div>
+</section>
+
+<!-- ================= 任务 12 ================= -->
+<section class="panel" data-tab="设计决策文档" data-num="12">
+  <div class="crumb">任务 12 / 14</div>
+  <h2>设计说明与决策文档</h2>
+  <p class="intro">六个关键决策,每个都写明:备选方案、为什么这么选、以及愿意付出的代价——设计不是没有缺点,而是想清楚了缺点。</p>
+  <div class="grid2">
+    <div class="card">
+      <span class="pill blue">D-1</span>
+      <h3 style="margin:10px 0 6px">核心页面是诊断工作台,不是记录列表</h3>
+      <p class="muted small">行业惯例以执行记录为主页面,我们反其道:先给结论候选,记录降级为下钻。<b class="muted">代价:</b>诊断质量不行时主页面就是短板。缓解:完整记录始终一次点击可达,诊断质量有专项测试守门。</p>
+    </div>
+    <div class="card">
+      <span class="pill blue">D-2</span>
+      <h3 style="margin:10px 0 6px">无证据引用的结论,不允许显示</h3>
+      <p class="muted small">落到数据层强约束:证据的「原始记录引用」为必填字段。<b class="muted">代价:</b>有些 AI 直觉正确但给不出引用的判断会被丢弃。接受——一次幻觉毁掉的信任远贵于漏掉一条候选。</p>
+    </div>
+    <div class="card">
+      <span class="pill blue">D-3</span>
+      <h3 style="margin:10px 0 6px">裁决是必经步骤,不裁决不能转检查项</h3>
+      <p class="muted small">裁决是系统校准数据的唯一来源;未经确认的「根因」生成的检查规则可能本身就是错的,会把错误固化进门禁。<b class="muted">代价:</b>多一步操作。缓解:裁决与转用例连续完成,仍满足三步闭环。</p>
+    </div>
+    <div class="card">
+      <span class="pill blue">D-4</span>
+      <h3 style="margin:10px 0 6px">失败归堆第一期用规则签名,不用语义聚类</h3>
+      <p class="muted small">规则签名可解释、可复现,归错了用户能看懂为什么;语义聚类的抖动会破坏运营指标的可信度。<b class="muted">代价:</b>语义相近但签名不同的事故会分堆。列入第二期,届时做「合并建议 + 人工确认」。</p>
+    </div>
+    <div class="card">
+      <span class="pill blue">D-5</span>
+      <h3 style="margin:10px 0 6px">发布门禁默认只警告,不拦截</h3>
+      <p class="muted small">上线初期误报不可避免,默认拦截会把误报变成「挡了我发版」的高成本事件,加速信任崩塌;让团队先观察准确率,再自主升级为拦截。<b class="muted">代价:</b>警告可能被忽略。缓解:推送到团队现有流程;连续命中同一规则时升级提示。</p>
+    </div>
+    <div class="card">
+      <span class="pill blue">D-6</span>
+      <h3 style="margin:10px 0 6px">回放用录制数据打桩,不真实调用外部系统</h3>
+      <p class="muted small">真实重放会对生产系统产生副作用(真的再退一次款);打桩回放足够验证「决策逻辑是否修复」。<b class="muted">代价:</b>外部系统变化时打桩失真。缓解:检查项标注录制时间,超过 30 天提示「快照可能过期」。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 任务 13 ================= -->
+<section class="panel" data-tab="质量风险评估" data-num="13">
+  <div class="crumb">任务 13 / 14</div>
+  <h2>质量风险前置评估</h2>
+  <p class="intro">从测试视角提前列出六大风险。核心认知:<b>信任是这个产品最稀缺的资源</b>——大部分缓解措施都围绕「不透支信任」设计。</p>
+  <div class="tblwrap"><table>
+    <tr><th>#</th><th>风险</th><th>概率</th><th>怎么发现</th><th>怎么缓解</th></tr>
+    <tr><td>R-1</td><td><b>诊断误报导致信任崩塌</b>:早期几次明显错误的候选会让团队永久放弃采信</td><td><span class="pill err">高</span></td><td>质量跑批持续运行;「成立率」按周监控,跌破四成告警</td><td>规则先行(准确率天然高);低可信降级为线索;反证常驻明示不确定性;先小范围试用</td></tr>
+    <tr><td>R-2</td><td><b>对比对象选错</b>:推荐的「成功执行」语境不同,差异误导用户</td><td><span class="pill warn">中</span></td><td>推荐采用率监控;「更换对象」点击率异常升高即为信号</td><td>推荐依据透明展示;允许手动更换;不满足条件就明说没有,不硬凑</td></tr>
+    <tr><td>R-3</td><td><b>采集不完整导致证据链断裂</b>:在残缺数据上得出错误结论</td><td><span class="pill err">高</span></td><td>体检四项得分作为诊断质量的前置门槛</td><td>数据不足时对应分析禁用并明示;完整度低时候选强制降档</td></tr>
+    <tr><td>R-4</td><td><b>大数据量性能退化</b>:恰恰是最需要本产品的复杂事故场景卡死</td><td><span class="pill warn">中</span></td><td>性能用例进持续集成;线上页面加载监控</td><td>聚合展示、按需加载;因果图构建设 1 秒预算,超时降级为局部子图</td></tr>
+    <tr><td>R-5</td><td><b>裁决反馈被污染</b>:随手乱点或单人偏见灌入校准数据,系统越校越歪</td><td><span class="pill warn">中</span></td><td>裁决耗时分布监控(5 秒内的「秒裁」标记可疑)</td><td>「不成立」强制选理由;按裁决人加权去噪;改判历史保留,污染可回溯清洗</td></tr>
+    <tr><td>R-6</td><td><b>隐私与合规</b>:检查项快照含未脱敏数据被回放 / 导出</td><td><span class="pill ok">低–中</span></td><td>抽样审计;导出前二次扫描</td><td>采集端优先脱敏 + 服务端兜底;快照加密,导出需裁决人权限</td></tr>
+  </table></div>
+</section>
+
+<!-- ================= 任务 14 ================= -->
+<section class="panel" data-tab="根因庭审" data-num="14">
+  <div class="crumb">任务 14 / 14</div>
+  <h2>创新亮点:根因庭审</h2>
+  <p class="intro">解决两个互为镜像的失败模式:① <b>AI 幻觉</b>——结论说得越流畅越危险;② <b>自动化偏见</b>——人看到「可信度 86%」就直接点确认,裁决沦为橡皮图章(本轮走查 B 的行为恰好复现了这一点)。现有产品都是「AI 陈述 → 人接受」的单向呈现,没有产品把「反对这个结论的证据」当一等公民。</p>
+
+  <div class="court">
+    <div class="case">
+      <span><b>候选根因 1</b> · 资料快照过期</span>
+      <span class="pill ok">规则判定</span>
+      <span class="muted small">可信度 86%</span>
+    </div>
+    <div class="court-cols">
+      <div class="court-col pros">
+        <h4>🔍 控方 · 论证成立</h4>
+        <ul>
+          <li><b>铁证:</b>第 3 步读取的快照生成于 4 小时前,早已超过有效期</li>
+          <li><b>数据失效:</b>快照写着「可退 ¥180」,真实订单只剩 ¥60 可退</li>
+          <li><b>传播链完整:</b>过期数据从第 3 步一路传到第 9 步,每一环有记录</li>
+          <li><b>历史判例:</b>与两个月前一起已裁决成立的事故是同一模式</li>
+        </ul>
+      </div>
+      <div class="court-col def">
+        <h4>🛡 辩方 · 专职唱反调</h4>
+        <ul>
+          <li><b>反证一:</b>历史上有 3 次同样读了过期快照却没失败——过期不必然出事</li>
+          <li><b>反证二:</b>报错也可能是「请求太频繁被限流」——但响应里没有限流标记,此解释被排除</li>
+        </ul>
+      </div>
+    </div>
+    <div class="verdict">
+      <b>法官裁决:</b>
+      <span class="vbtn yes">✔ 成立</span>
+      <span class="vbtn">✘ 不成立</span>
+      <span class="vbtn">? 证据不足</span>
+      <span class="muted small" style="margin-left:auto">裁决后 → 一键转检查项 / 发起改判</span>
+    </div>
+  </div>
+
+  <h3>机制四角色</h3>
+  <ul class="tick">
+    <li><b>控方(AI 检察官):</b>陈述论证链,每一环挂证据卡片,可点回原始记录;</li>
+    <li><b>辩方(AI 辩护人):</b>由独立通道<b>强制</b>生成,专职搜集反证与替代解释;找不到实质反证时明确显示「未找到有效反证」——这本身就是强支持信号;</li>
+    <li><b>法官(用户):</b>三选一裁决。裁「不成立」必须选理由并可指认正确根因;裁「证据不足」生成待补数据清单;</li>
+    <li><b>判例(校准与沉淀):</b>每次裁决进入校准日志;成立的事故进入判例库,后续相似事故会引用判例并加权可信度。</li>
+  </ul>
+
+  <h3>为什么没人这样做</h3>
+  <p class="prose" style="max-width:48em">主流思路是让 AI 显得更可信(更高准确率、更流畅的解释),而不是主动暴露自己的可疑之处——后者直觉上「显得产品不自信」。但在排障场景,工程师的信任恰恰来自<b>可证伪性</b>:一个会主动说「我可能错在哪」的系统,比一个永远笃定的系统更值得信。</p>
+  <div class="callout">庭审不是额外仪式,它同时完成三件事:<b>对冲幻觉</b>(反证常驻)、<b>对冲轻信</b>(强制阅读对立观点后再裁决)、<b>生产高质量校准数据</b>(带理由的裁决远比一个 👍 有信息量)。全程一屏,30 秒到 2 分钟。</div>
+
+  <h3>附:本期未决问题与第三周验证项</h3>
+  <div class="grid2">
+    <div class="card"><b>未决问题(6 项)</b>
+      <p class="muted small" style="margin-top:6px">辩方反证质量未经真实数据验证;失败归堆规则的实际效果未验证;有状态外部系统的回放保真度待细化;可信度「百分比 vs 三档」展示待真人实测定夺;待补数据清单无回看入口;定价计费未展开。</p>
+    </div>
+    <div class="card"><b>第三周验证项(4 项)</b>
+      <p class="muted small" style="margin-top:6px">用 10–15 条已知病根的记录实测定位命中率(目标 ≥ 70%);找 3–5 名真实用户实测原型;验证真实框架的采集稳定性;在 2 个开源 Agent 项目上实跑接入体检。</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  var tabbar = document.getElementById('tabbar');
+
+  panels.forEach(function (p, i) {
+    var btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.innerHTML = '<b>' + p.dataset.num + '</b>' + p.dataset.tab;
+    btn.addEventListener('click', function () { show(i, true); });
+    tabbar.appendChild(btn);
+
+    var pager = document.createElement('div');
+    pager.className = 'pager';
+    var prev = document.createElement('button');
+    var next = document.createElement('button');
+    if (i > 0) {
+      prev.innerHTML = '<small>上一页</small>← ' + panels[i - 1].dataset.tab;
+      prev.addEventListener('click', function () { show(i - 1, true); });
+    } else { prev.disabled = true; }
+    if (i < panels.length - 1) {
+      next.style.textAlign = 'right';
+      next.innerHTML = '<small>下一页</small>' + panels[i + 1].dataset.tab + ' →';
+      next.addEventListener('click', function () { show(i + 1, true); });
+    } else { next.disabled = true; }
+    pager.appendChild(prev);
+    pager.appendChild(next);
+    p.appendChild(pager);
+  });
+
+  var tabs = Array.prototype.slice.call(tabbar.children);
+
+  function show(i, scroll) {
+    panels.forEach(function (p, j) { p.classList.toggle('active', i === j); });
+    tabs.forEach(function (t, j) { t.classList.toggle('active', i === j); });
+    tabs[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (history.replaceState) history.replaceState(null, '', '#p' + i);
+  }
+
+  var start = 0;
+  var m = location.hash.match(/^#p(\d+)$/);
+  if (m) { var n = parseInt(m[1], 10); if (n >= 0 && n < panels.length) start = n; }
+  show(start, false);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    var cur = panels.findIndex(function (p) { return p.classList.contains('active'); });
+    if (e.key === 'ArrowRight' && cur < panels.length - 1) show(cur + 1, true);
+    if (e.key === 'ArrowLeft' && cur > 0) show(cur - 1, true);
+  });
+</script>
+</body>
+</html>
