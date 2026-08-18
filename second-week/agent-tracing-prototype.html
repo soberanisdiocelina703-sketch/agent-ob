@@ -273,10 +273,10 @@
           <div class="small muted mt10">最高置信诊断：记忆快照过期后被下游读取（86%）</div>
         </div>
         <div class="card cluster bd" style="padding:16px 18px" onclick="toast('演示原型仅开放 FM-01 簇的完整链路')">
-          <div style="display:flex;justify-content:space-between"><b>交接契约缺字段</b><span class="tag t-warn">FM-02</span></div>
+          <div style="display:flex;justify-content:space-between"><b>传参契约缺字段</b><span class="tag t-warn">FM-02</span></div>
           <div class="cnt" style="color:var(--warn)">7 <span class="small muted" style="font-weight:400">起 / 24h</span></div>
           <div class="trend muted">— 持平 · 影响 6 个会话</div>
-          <div class="small muted mt10">最高置信诊断：handoff 缺少 currency 字段（63%）</div>
+          <div class="small muted mt10">最高置信诊断：步骤间传参缺少 currency 字段（63%）</div>
         </div>
         <div class="card cluster bd" style="padding:16px 18px" onclick="toast('演示原型仅开放 FM-01 簇的完整链路')">
           <div style="display:flex;justify-content:space-between"><b>工具参数格式错误</b><span class="tag t-warn">FM-03</span></div>
@@ -294,7 +294,7 @@
 
       <div class="filters">
         <select><option>簇：过期状态污染 (FM-01)</option><option>全部簇</option></select>
-        <select><option>Agent：全部</option><option>Planner</option><option>RefundAgent</option><option>KnowledgeAgent</option></select>
+        <select><option>步骤：全部</option><option>规划</option><option>退款执行</option><option>知识检索</option></select>
         <select><option>时间：近 24 小时</option><option>近 7 天</option></select>
         <select><option>裁决状态：全部</option><option>未裁决</option><option>已裁决</option></select>
         <select><option>置信度：全部</option><option>≥ 80%</option><option>40–80%</option></select>
@@ -303,28 +303,28 @@
       <div class="card" id="incList">
         <div class="hd"><b>事故列表 · 过期状态污染（FM-01）</b><span class="tag t-gray">12 条</span></div>
         <table>
-          <thead><tr><th>事故 ID</th><th>时间</th><th>入口 Agent</th><th>症状</th><th>首故障点（候选）</th><th>置信度</th><th>裁决状态</th></tr></thead>
+          <thead><tr><th>事故 ID</th><th>时间</th><th>任务类型</th><th>症状</th><th>首故障点（候选）</th><th>置信度</th><th>裁决状态</th></tr></thead>
           <tbody>
             <tr class="click" onclick="openIncident()">
-              <td class="mono"><b>INC-2026-0814-003</b></td><td class="small">08-14 10:22</td><td>Planner</td>
+              <td class="mono"><b>INC-2026-0814-003</b></td><td class="small">08-14 10:22</td><td>退款</td>
               <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot v3 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:86%;background:var(--rule)"></div></div>86%</div></td>
               <td id="vstat-list"><span class="tag t-warn">未裁决</span></td>
             </tr>
             <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
-              <td class="mono">INC-2026-0814-002</td><td class="small">08-14 09:47</td><td>Planner</td>
+              <td class="mono">INC-2026-0814-002</td><td class="small">08-14 09:47</td><td>退款</td>
               <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot v2 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:84%;background:var(--rule)"></div></div>84%</div></td>
               <td><span class="tag t-warn">未裁决</span></td>
             </tr>
             <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
-              <td class="mono">INC-2026-0813-041</td><td class="small">08-13 21:03</td><td>Planner</td>
+              <td class="mono">INC-2026-0813-041</td><td class="small">08-13 21:03</td><td>改址</td>
               <td>改址失败 · 地址版本冲突</td><td>记忆读取 · address_snapshot 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:79%;background:var(--rule)"></div></div>79%</div></td>
               <td><span class="tag t-ok">成立 · 王工</span></td>
             </tr>
             <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
-              <td class="mono">INC-2026-0813-036</td><td class="small">08-13 18:30</td><td>Planner</td>
+              <td class="mono">INC-2026-0813-036</td><td class="small">08-13 18:30</td><td>退款</td>
               <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:88%;background:var(--rule)"></div></div>88%</div></td>
               <td><span class="tag t-ok">成立 · 李工</span></td>
@@ -356,19 +356,19 @@
           <div class="cpath">
             <div class="cnode" onclick="hlSpan('S1')"><div class="nm">S1 用户请求</div><div class="tp">ENTRY</div></div>
             <div class="carrow">→</div>
-            <div class="cnode" onclick="hlSpan('S2')"><div class="nm">S2 Planner 规划</div><div class="tp">AGENT</div></div>
+            <div class="cnode" onclick="hlSpan('S2')"><div class="nm">S2 规划步骤</div><div class="tp">AGENT</div></div>
             <div class="carrow">→</div>
             <div class="cnode fault" onclick="hlSpan('S3')"><div class="nm">⚑ S3 记忆读取</div><div class="tp">MEMORY · 首故障点</div></div>
             <div class="carrow">→</div>
             <div class="cnode" onclick="hlSpan('S4')"><div class="nm">S4 生成退款计划</div><div class="tp">LLM</div></div>
             <div class="carrow">→</div>
-            <div class="cnode" onclick="hlSpan('S5')"><div class="nm">S5 交接→Refund</div><div class="tp">HANDOFF</div></div>
+            <div class="cnode" onclick="hlSpan('S5')"><div class="nm">S5 传参→退款执行</div><div class="tp">HANDOFF</div></div>
             <div class="carrow">→</div>
             <div class="cnode" onclick="hlSpan('S7')"><div class="nm">S7 参数构造</div><div class="tp">LLM</div></div>
             <div class="carrow">→</div>
             <div class="cnode err" onclick="hlSpan('S9')"><div class="nm">✖ S9 refund_api</div><div class="tp">TOOL · 报错点</div></div>
           </div>
-          <div class="small muted">⚑ 过期数据在 S3 进入链路，经 S4 计划、S5 交接原样传播，S9 才以 422 暴露 —— 报错点距首故障点 6 步。</div>
+          <div class="small muted">⚑ 过期数据在 S3 进入链路，经 S4 计划、S5 传参原样传播，S9 才以 422 暴露 —— 报错点距首故障点 6 步。</div>
         </div>
       </div>
 
@@ -395,7 +395,7 @@
               <div class="evi support"><div class="ei">📎</div><div><b>E1 · 记忆读取事件</b>：S3 读取 <span class="mono">order_snapshot v3</span>，写入于 4 小时 12 分钟前（snapshot_age = 15,120s），超过过期阈值 3,600s。<span class="tag t-rule">规则：快照过期不变量</span><br><span class="ref" onclick="hlSpan('S3')">↳ 跳转原始事件 S3 / events_memory#8821</span></div></div>
               <div class="evi support"><div class="ei">📎</div><div><b>E2 · 状态 Diff</b>：快照中 <span class="mono">status=PAID, refundable_amount=180</span>；实时订单系统为 <span class="mono">status=PARTIALLY_REFUNDED, refundable_amount=60</span>（08-14 06:10 已部分退款 ¥120）。<br><span class="ref" onclick="go('diff')">↳ 查看成功/失败 Diff</span></div></div>
               <div class="evi support"><div class="ei">📎</div><div><b>E3 · 工具参数回溯</b>：S9 请求体 <span class="mono">refund_amount=180</span> 正是快照值；返回 <span class="mono">422 REFUND_AMOUNT_EXCEEDED (max_refundable=60)</span>。<br><span class="ref" onclick="hlSpan('S9')">↳ 跳转原始事件 S9 / spans#S9</span></div></div>
-              <div class="evi support"><div class="ei">📎</div><div><b>E4 · 基线对比</b>：成功链 TRC-9f21 在同位置调用 OrderAgent 实时查询（而非记忆快照），拿到 <span class="mono">refundable_amount=60</span>，退款成功。<br><span class="ref" onclick="go('diff')">↳ 查看基线对比</span></div></div>
+              <div class="evi support"><div class="ei">📎</div><div><b>E4 · 基线对比</b>：成功链 TRC-9f21 在同位置调用订单查询工具实时查询（而非记忆快照），拿到 <span class="mono">refundable_amount=60</span>，退款成功。<br><span class="ref" onclick="go('diff')">↳ 查看基线对比</span></div></div>
               <div class="small" style="font-weight:700;margin:12px 0 8px;color:var(--warn)">反证（2）—— 完整对抗论证请进入庭审</div>
               <div class="evi counter"><div class="ei">⚡</div><div><b>C1</b>：历史 3 条成功链同样读取了过期快照但未失败。<span class="muted">（控方回应见庭审）</span></div></div>
               <div class="evi counter"><div class="ei">⚡</div><div><b>C2</b>：422 也可能由接口限流导致。<span class="muted">（控方回应见庭审）</span></div></div>
@@ -408,7 +408,7 @@
             <div class="row" onclick="togglecand('cand2')">
               <div class="rank" style="background:#d97706">2</div>
               <div style="flex:1">
-                <b>交接契约缺失 currency 字段：S5 handoff 未携带币种，可能导致金额语义歧义</b>
+                <b>传参契约缺失 currency 字段：S5 步骤间传参未携带币种，可能导致金额语义歧义</b>
                 <div class="small muted" style="margin-top:3px">涉及 S5 · 存在强反证，采信需谨慎</div>
               </div>
               <span class="tag t-model">模型推断</span>
@@ -416,8 +416,8 @@
               <span class="muted">▾</span>
             </div>
             <div class="body">
-              <div class="evi support"><div class="ei">📎</div><div><b>E5 · 交接事件</b>：S5 契约 v2 应含 <span class="mono">currency</span>，实际 fields_missing=["currency"]。<br><span class="ref" onclick="hlSpan('S5')">↳ 跳转原始事件 S5 / events_handoff#301</span></div></div>
-              <div class="evi counter"><div class="ei">⚡</div><div><b>强反证</b>：基线成功链 TRC-9f21 的同一交接<b>同样缺失</b> currency 字段，但执行成功 —— 该缺失与本次失败无因果区分度。<br><span class="ref" onclick="go('diff')">↳ 查看交接 Diff</span></div></div>
+              <div class="evi support"><div class="ei">📎</div><div><b>E5 · 传参事件</b>：S5 契约 v2 应含 <span class="mono">currency</span>，实际 fields_missing=["currency"]。<br><span class="ref" onclick="hlSpan('S5')">↳ 跳转原始事件 S5 / events_handoff#301</span></div></div>
+              <div class="evi counter"><div class="ei">⚡</div><div><b>强反证</b>：基线成功链 TRC-9f21 的同一传参<b>同样缺失</b> currency 字段，但执行成功 —— 该缺失与本次失败无因果区分度。<br><span class="ref" onclick="go('diff')">↳ 查看传参 Diff</span></div></div>
               <div class="small muted mt10">建议：作为独立的数据质量问题单独立项修复，但非本事故根因。</div>
             </div>
           </div>
@@ -447,12 +447,12 @@
         <div class="hd" style="cursor:pointer" onclick="var t=document.getElementById('ttree');t.style.display=t.style.display==='none'?'block':'none'"><b>完整 Trace 树（按需下钻）</b><span class="small muted">9 个 Span · 点击标题展开/收起</span></div>
         <div class="bd ttree" id="ttree" style="display:none">
           <div class="trow" id="sp-S1"><span class="mono muted">S1</span><span class="tag t-gray kind">ENTRY</span><span>用户请求：「我要退掉订单 #58291 的 ¥180」</span><span class="dur">0ms</span></div>
-          <div class="trow" id="sp-S2"><span class="ind">├─</span><span class="mono muted">S2</span><span class="tag t-brand kind">AGENT</span><span>Planner · 任务规划</span><span class="dur">312ms</span></div>
-          <div class="trow hl" id="sp-S3"><span class="ind">│&nbsp;&nbsp;├─</span><span class="mono muted">S3</span><span class="tag t-warn kind">MEMORY</span><span>⚑ KnowledgeAgent · 读取 order_snapshot v3（写入于 4h12m 前）<b style="color:var(--warn)">　首故障点</b></span><span class="dur">48ms</span></div>
-          <div class="trow" id="sp-S4"><span class="ind">│&nbsp;&nbsp;└─</span><span class="mono muted">S4</span><span class="tag t-model kind">LLM</span><span>Planner · 生成退款计划（qwen-max，amount=180 来自快照）</span><span class="dur">1,840ms · 812 tok</span></div>
-          <div class="trow" id="sp-S5"><span class="ind">├─</span><span class="mono muted">S5</span><span class="tag t-brand kind">HANDOFF</span><span>Planner → RefundAgent · 契约 v2（缺 currency 字段）</span><span class="dur">6ms</span></div>
-          <div class="trow" id="sp-S6"><span class="ind">├─</span><span class="mono muted">S6</span><span class="tag t-brand kind">AGENT</span><span>RefundAgent · 开始执行</span><span class="dur">95ms</span></div>
-          <div class="trow" id="sp-S7"><span class="ind">│&nbsp;&nbsp;├─</span><span class="mono muted">S7</span><span class="tag t-model kind">LLM</span><span>RefundAgent · 构造退款参数（refund_amount=180）</span><span class="dur">1,203ms · 430 tok</span></div>
+          <div class="trow" id="sp-S2"><span class="ind">├─</span><span class="mono muted">S2</span><span class="tag t-brand kind">AGENT</span><span>规划步骤 · 任务规划</span><span class="dur">312ms</span></div>
+          <div class="trow hl" id="sp-S3"><span class="ind">│&nbsp;&nbsp;├─</span><span class="mono muted">S3</span><span class="tag t-warn kind">MEMORY</span><span>⚑ 知识检索步骤 · 读取 order_snapshot v3（写入于 4h12m 前）<b style="color:var(--warn)">　首故障点</b></span><span class="dur">48ms</span></div>
+          <div class="trow" id="sp-S4"><span class="ind">│&nbsp;&nbsp;└─</span><span class="mono muted">S4</span><span class="tag t-model kind">LLM</span><span>规划步骤 · 生成退款计划（qwen-max，amount=180 来自快照）</span><span class="dur">1,840ms · 812 tok</span></div>
+          <div class="trow" id="sp-S5"><span class="ind">├─</span><span class="mono muted">S5</span><span class="tag t-brand kind">HANDOFF</span><span>规划 → 退款执行 · 传参契约 v2（缺 currency 字段）</span><span class="dur">6ms</span></div>
+          <div class="trow" id="sp-S6"><span class="ind">├─</span><span class="mono muted">S6</span><span class="tag t-brand kind">AGENT</span><span>退款执行步骤 · 开始执行</span><span class="dur">95ms</span></div>
+          <div class="trow" id="sp-S7"><span class="ind">│&nbsp;&nbsp;├─</span><span class="mono muted">S7</span><span class="tag t-model kind">LLM</span><span>退款执行步骤 · 构造退款参数（refund_amount=180）</span><span class="dur">1,203ms · 430 tok</span></div>
           <div class="trow" id="sp-S8"><span class="ind">│&nbsp;&nbsp;├─</span><span class="mono muted">S8</span><span class="tag t-gray kind">TOOL</span><span>risk_check · 风控检查通过</span><span class="dur">210ms</span></div>
           <div class="trow hlbad" id="sp-S9"><span class="ind">│&nbsp;&nbsp;└─</span><span class="mono muted">S9</span><span class="tag t-bad kind">TOOL</span><span>✖ refund_api · HTTP 422 REFUND_AMOUNT_EXCEEDED（请求 ¥180，可退 ¥60）<b style="color:var(--bad)">　报错点</b></span><span class="dur">388ms</span></div>
         </div>
@@ -482,7 +482,7 @@
           <div><div class="dh pass">成功链 TRC-9f21（基线）</div>
             <div class="drow dif"><span class="dk">order.status</span><span class="dv mono">PARTIALLY_REFUNDED（实时查询）</span></div>
             <div class="drow dif"><span class="dk">refundable_amount</span><span class="dv mono">60</span></div>
-            <div class="drow dif"><span class="dk">数据来源</span><span class="dv">tool · OrderAgent 实时查询</span></div>
+            <div class="drow dif"><span class="dk">数据来源</span><span class="dv">tool · 订单查询工具实时查询</span></div>
             <div class="drow"><span class="dk">order_id</span><span class="mono">#57904</span></div>
             <div class="drow"><span class="dk">user_tier</span><span class="mono">VIP-2</span></div>
           </div>
@@ -490,7 +490,7 @@
       </div>
 
       <div class="card mb10">
-        <div class="hd"><b>② 交接 Diff（S5 · Planner → RefundAgent）</b><span class="tag t-warn">1 处差异 · 1 处共同缺失</span></div>
+        <div class="hd"><b>② 传参 Diff（S5 · 规划 → 退款执行）</b><span class="tag t-warn">1 处差异 · 1 处共同缺失</span></div>
         <div class="diffwrap" style="border:none;border-top:1px solid var(--line);border-radius:0">
           <div><div class="dh fail">失败链</div>
             <div class="drow dif"><span class="dk">payload.amount</span><span class="dv mono">180</span><span class="ebadge">证据 E2</span></div>
@@ -540,7 +540,7 @@
           <div class="bd">
             <div class="evi support"><div class="ei">1️⃣</div><div><b>过期事实</b>：S3 读取的快照写入于 4h12m 前（15,120s），超过阈值 3,600s。<span class="tag t-rule">铁证 · 规则</span><br><span class="ref" onclick="go('workbench')">↳ events_memory#8821</span></div></div>
             <div class="evi support"><div class="ei">2️⃣</div><div><b>数据失效</b>：快照可退 ¥180，实时可退 ¥60 —— 期间发生过部分退款 ¥120（06:10）。<br><span class="ref" onclick="go('diff')">↳ 状态 Diff</span></div></div>
-            <div class="evi support"><div class="ei">3️⃣</div><div><b>传播链完整</b>：¥180 从快照 → 计划（S4）→ 交接（S5）→ 参数（S7）→ 请求体（S9）逐步传递，每步均有事件记录，无其他来源写入。</div></div>
+            <div class="evi support"><div class="ei">3️⃣</div><div><b>传播链完整</b>：¥180 从快照 → 计划（S4）→ 传参（S5）→ 参数（S7）→ 请求体（S9）逐步传递，每步均有事件记录，无其他来源写入。</div></div>
             <div class="evi support"><div class="ei">4️⃣</div><div><b>反事实成立</b>：基线成功链在同位置用实时查询取代快照，其余条件相同，结果成功。<br><span class="ref" onclick="go('diff')">↳ 基线对比</span></div></div>
             <div class="small muted mt10">判例引用：INC-0813-036 同模式，08-13 由李工裁决「成立」。</div>
           </div>
@@ -590,7 +590,7 @@
             </tr>
             <tr>
               <td class="mono">REG-1022</td><td class="mono small">INC-2026-0809-014</td>
-              <td class="mono small">handoff(Planner→Notifier) 必含 order_id</td>
+              <td class="mono small">handoff(规划→通知) 必含 order_id</td>
               <td class="small">2026-08-09 · 工具打桩</td><td><span class="tag t-ok">已复核</span></td>
             </tr>
             <tr>
@@ -619,7 +619,7 @@
                 <td class="small">不变量违反：<span class="mono">refund_amount(180) &gt; live(refundable_amount)(60)</span> —— 与 REG-1037 命中同一不变量（FM-01），建议升级为阻断。</td></tr>
               <tr><td class="mono">REG-1037</td><td><span class="tag t-warn">警告</span></td>
                 <td class="small">不变量违反：<span class="mono">refund_amount(150) &gt; live(refundable_amount)(90)</span> —— 新版本仍从记忆取金额。<b style="color:var(--warn)">连续 2 次命中同一不变量，建议升级为阻断。</b><span class="pill-link" onclick="go('settings')">调整门禁模式 →</span></td></tr>
-              <tr><td class="mono">REG-1022</td><td><span class="tag t-ok">通过</span></td><td class="small">交接字段完整</td></tr>
+              <tr><td class="mono">REG-1022</td><td><span class="tag t-ok">通过</span></td><td class="small">传参字段完整</td></tr>
               <tr><td class="mono">REG-1015</td><td><span class="tag t-ok">通过</span></td><td class="small">参数格式合规</td></tr>
             </tbody>
           </table>
@@ -643,9 +643,9 @@
             <thead><tr><th>问题</th><th>位置</th><th>影响</th><th>操作</th></tr></thead>
             <tbody>
               <tr>
-                <td><span class="tag t-warn">断链</span> Notifier 的 Span 无法挂到调用树</td>
+                <td><span class="tag t-warn">断链</span> 通知步骤的 Span 无法挂到调用树</td>
                 <td class="mono small">notifier-service · 异步消息消费侧</td>
-                <td class="small">已按「时间窗+会话ID」推测关联并打标；跨 Agent 因果分析对该段降级</td>
+                <td class="small">已按「时间窗+会话ID」推测关联并打标；跨步骤因果分析对该段降级</td>
                 <td><span class="pill-link" onclick="var g=document.getElementById('fix1');g.classList.toggle('show')">修复指引 ▾</span></td>
               </tr>
               <tr><td colspan="4" style="padding:0 12px"><div class="fixguide" id="fix1">原因：消息队列消费侧未透传 <span class="mono">traceparent</span>。修复：生产侧把 traceparent 写入消息 metadata；消费侧启动 Span 前先读取——<br><span class="mono">ctx = extract_context(msg.metadata)　# 追加 1 行</span><br><span class="mono">with tracer.start_as_current_span("notify", context=ctx): ...</span></div></td></tr>
