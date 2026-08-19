@@ -3,22 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CauseLens 因镜 · 可点击交互原型</title>
+<title>寻迹 · Agent 链路诊断原型</title>
 <style>
   :root{
     /* 主流平台配色：浅灰白底 + 石板灰文字 + 标准蓝品牌色，语义色克制 */
     --bg:#f6f8fa; --panel:#ffffff; --line:#e2e8f0; --line2:#cbd5e1;
     --ink:#0f172a; --ink2:#334155; --muted:#64748b;
     --brand:#2563eb; --brand2:#1d4ed8; --brand-bg:#eff6ff;
-    --seal:#dc2626;
     --ok:#16a34a; --ok-bg:#dcfce7;
     --warn:#b45309; --warn-bg:#fef3c7;
     --bad:#dc2626; --bad-bg:#fee2e2;
     --rule:#0d9488; --rule-bg:#ccfbf1;
     --model:#7c3aed; --model-bg:#ede9fe;
-    --mark:#fef08a;
+
     --sidebar:#ffffff; --sidebar-ink:#334155;
-    --display:Georgia,"Times New Roman","SimSun",serif;
     --shadow:0 1px 3px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.05);
     --r:10px;
   }
@@ -80,6 +78,24 @@
   .conf{display:flex;align-items:center;gap:8px}
   .conf .bar{width:90px;height:6px;background:#e2e8f0;border-radius:4px;overflow:hidden}
   .conf .fill{height:100%;border-radius:4px}
+
+  /* ===== runs & trace detail ===== */
+  .run-summary .metric{font-size:26px;font-weight:750;line-height:1.2;margin:4px 0}
+  .run-status{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+  .run-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#94a3b8}
+  .run-status.success{color:var(--ok)} .run-status.success::before{background:var(--ok)}
+  .run-status.failed{color:var(--bad)} .run-status.failed::before{background:var(--bad)}
+  .run-row.hidden{display:none}
+  .run-empty{display:none;padding:26px;text-align:center;color:var(--muted)}
+  .trace-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+  .trace-hero h2{font-size:20px;margin-bottom:4px}
+  .trace-facts{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:14px}
+  .trace-facts>div{padding:12px 16px;border-right:1px solid var(--line)}
+  .trace-facts>div:last-child{border-right:none}
+  .trace-facts .k{font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .trace-facts .v{font-weight:650}
+  .success-note{background:var(--ok-bg);border:1px solid #bbf7d0;border-radius:var(--r);padding:12px 14px;color:#166534;display:flex;gap:10px;align-items:flex-start}
+
   /* ===== incidents page ===== */
   .cluster{cursor:pointer;position:relative;transition:transform .1s}
   .cluster:hover{transform:translateY(-2px);border-color:var(--brand)}
@@ -133,11 +149,11 @@
   .drow.dif{background:#fff8c5}
   .drow.dif .dv{color:var(--warn);font-weight:700}
   .drow .ebadge{font-size:10px;background:var(--rule-bg);color:var(--rule);border-radius:3px;padding:1px 5px;margin-left:auto;flex-shrink:0}
-  /* ===== court ===== */
-  .court{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  /* ===== review ===== */
+  .review{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .side-p .hd{background:var(--rule-bg)} .side-d .hd{background:var(--warn-bg)}
-  .verdictbar{margin-top:18px;background:#0f172a;border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;gap:14px;color:#e2e8f0}
-  .verdictbar b{color:#fff}
+  .reviewbar{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;gap:14px;color:var(--ink);box-shadow:var(--shadow)}
+  .reviewbar b{color:var(--ink)}
   .vd-done{background:var(--ok-bg);border:1px solid #bbf7d0;color:var(--ok);border-radius:var(--r);padding:14px 18px;margin-top:16px;display:none}
   /* ===== gate ===== */
   .gsum{display:flex;gap:24px;align-items:center}
@@ -181,7 +197,7 @@
   @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
   #toast.in{display:block;animation:toastIn .25s cubic-bezier(.2,.8,.3,1)}
   @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%)}}
-  /* 裁决确认：落定感（轻微上弹后回落）+ 对勾 pop */
+  /* 复核确认：落定感（轻微上弹后回落）+ 对勾 pop */
   .vd-done.show{display:block;animation:settle .35s cubic-bezier(.2,.8,.3,1)}
   @keyframes settle{0%{opacity:0;transform:translateY(10px) scale(.98)}60%{opacity:1;transform:translateY(-2px) scale(1.005)}100%{opacity:1;transform:none}}
   /* 转用例成功：新行滑入 + 背景闪淡 */
@@ -198,70 +214,180 @@
   .cand.fadein{animation:candIn .35s ease-out}
   @keyframes candIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-  /* ===== 明艳风格层（原案卷结构保留，配色重构）===== */
-  /* 字体三层：衬线=案卷标题，黑体=正文，等宽=数据 */
-  .logo b{font-family:var(--display);letter-spacing:1.5px}
-  .crumb b{font-family:var(--display);font-size:17.5px;letter-spacing:.5px}
-  .card .hd b{font-family:var(--display);font-size:15px;letter-spacing:.4px}
-  .cluster .cnt,.chk .score,.gsum .big{font-family:var(--display)}
-  .verdictbar b{font-family:var(--display);letter-spacing:2px}
-  /* 侧边导航：白底浅色导航，激活项蓝底蓝字 */
+  /* ===== 主流工程产品基线 ===== */
+  /* 统一无衬线字体与常规层级，避免主题化造型干扰排障 */
+  .logo b{letter-spacing:.2px}
+  .crumb b{font-size:17px;letter-spacing:0}
+  .card .hd b{font-size:14.5px;letter-spacing:0}
   .nav{padding:10px 8px}
   .nav a{border-radius:8px;padding:9px 14px}
   .nav a.active{background:#eff6ff;color:var(--brand);font-weight:600}
   .nav a.active:hover{background:#eff6ff;color:var(--brand)}
-  /* 语义标签更接近证物标签：方角、等宽编号感 */
-  .tag{border-radius:4px}
-  /* 证据定位 = 荧光笔标记（覆盖此前的品牌色驻留高亮） */
-  .trow.located{background:var(--mark);box-shadow:inset 3px 0 0 var(--ink)}
+  .tag{border-radius:20px}
+  /* 原始事件定位沿用产品通用选中态 */
+  .trow.located{background:var(--brand-bg);box-shadow:inset 3px 0 0 var(--brand)}
   .trow.flash{animation:spanFlash 1.6s ease-out}
-  @keyframes spanFlash{0%,25%{outline:2px solid var(--ink);outline-offset:-2px}45%{outline:2px solid transparent}65%{outline:2px solid var(--ink);outline-offset:-2px}100%{outline:2px solid transparent}}
-  /* 签名元素：裁决印章（印章红=已盖章生效，与错误红的形态完全不同） */
-  .stamp{display:inline-block;border:3px double var(--seal);color:var(--seal);border-radius:9px;padding:1px 10px;font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:5px;text-indent:5px;transform:rotate(-6deg);vertical-align:-2px;background:rgba(255,255,255,.4)}
-  .vd-done.show .stamp{animation:stampIn .32s cubic-bezier(.2,1.4,.4,1) both}
-  @keyframes stampIn{0%{opacity:0;transform:scale(2) rotate(-16deg)}100%{opacity:1;transform:scale(1) rotate(-6deg)}}
+  @keyframes spanFlash{0%,25%{outline:2px solid var(--brand);outline-offset:-2px}45%{outline:2px solid transparent}65%{outline:2px solid var(--brand);outline-offset:-2px}100%{outline:2px solid transparent}}
+  .status-check{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;font-weight:700;margin-right:6px}
   /* 键盘可达性 */
-  :focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 </style>
 </head>
 <body>
 <div class="app">
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar">
-    <div class="logo"><b>◎ CauseLens</b><span>因镜 · Causal-first Debugger</span></div>
+    <div class="logo"><b>寻迹</b><span>Agent 链路诊断平台</span></div>
     <nav class="nav" id="nav">
+      <a data-page="runs"><span class="ico">▶</span>运行记录</a>
       <a data-page="incidents" class="active"><span class="ico">⚠</span>事故列表</a>
       <a data-page="workbench"><span class="ico">🔍</span>诊断工作台</a>
       <a data-page="diff"><span class="ico">⇄</span>成功/失败 Diff</a>
-      <a data-page="court"><span class="ico">⚖</span>根因庭审</a>
+      <a data-page="review"><span class="ico">✓</span>诊断复核</a>
       <a data-page="gate"><span class="ico">🛡</span>回归集与门禁</a>
       <a data-page="checkup"><span class="ico">🩺</span>接入体检</a>
       <a data-page="settings"><span class="ico">⚙</span>设置</a>
     </nav>
-    <div class="sb-foot">原型版本 v1.4 · 主流平台配色<br>项目：订单助手（生产）· 演示数据</div>
+    <div class="sb-foot">原型版本 v1.6 · 标准工程平台风格<br>项目：订单助手（生产）· 演示数据</div>
   </aside>
 
   <main class="main">
     <div class="topbar">
       <div class="crumb">订单助手（生产环境）<b id="pageTitle">事故列表</b></div>
-      <div class="userchip"><span>李工 · 裁决人</span><div class="avatar">李</div></div>
+      <div class="userchip"><span>李工 · 复核人</span><div class="avatar">李</div></div>
     </div>
 
     <div class="guide" id="guide">
       <div class="gi">🧭</div>
       <div>
-        <b>演示引导 · 三步闭环：发现 → 裁决 → 转用例</b>
+        <b>演示引导 · 三步闭环：发现 → 复核 → 转用例</b>
         <div class="steps">
           <em onclick="go('incidents')">1</em>在「事故列表」点开簇 <b>过期状态污染</b> 下的事故 INC-2026-0814-003 →
           <em onclick="go('workbench')">2</em>在「诊断工作台」查看首故障点、展开证据 →
           <em onclick="go('diff')">3</em>可选：打开「成功/失败 Diff」对比 →
-          <em onclick="go('court')">4</em>进入「根因庭审」，阅读控辩双方后裁决 →
-          <em onclick="go('gate')">5</em>裁决成立后一键「转回归用例」，在「门禁」页查看结果。
-          另有异常演示：候选 3 为低置信度折叠线索；「接入体检」页含断链警告。<span class="small" style="color:#94a3b8">（点击步骤编号可直达对应页面）</span>
+          <em onclick="go('review')">4</em>进入「诊断复核」，对照支持证据、反面证据和其他解释后确认 →
+          <em onclick="go('gate')">5</em>确认根因后一键「转回归用例」，在「门禁」页查看结果。
+          可从侧栏「运行记录」查看成功与失败 Trace，并打开正常 Trace 详情或设为对比基线。另有异常演示：候选 3 为低置信度折叠线索；「接入体检」页含断链警告。<span class="small" style="color:#94a3b8">（点击步骤编号可直达对应页面）</span>
         </div>
       </div>
       <div class="close" onclick="document.getElementById('guide').style.display='none'">✕</div>
     </div>
+
+
+    <!-- ============ PAGE: runs ============ -->
+    <section class="page" id="pg-runs">
+      <div class="grid g4 run-summary mb10">
+        <div class="card bd"><div class="small muted">近 24 小时运行</div><div class="metric">1,284</div><div class="small muted">较昨日 +8.6%</div></div>
+        <div class="card bd"><div class="small muted">成功率</div><div class="metric" style="color:var(--ok)">96.8%</div><div class="small muted">成功 1,243 · 失败 41</div></div>
+        <div class="card bd"><div class="small muted">P95 耗时</div><div class="metric">3.2s</div><div class="small muted">中位数 1.8s</div></div>
+        <div class="card bd"><div class="small muted">涉及事故</div><div class="metric" style="color:var(--bad)">12</div><div class="small muted">归入 4 个失败模式</div></div>
+      </div>
+
+      <div class="filters">
+        <select id="runStatusFilter" onchange="filterRuns(this.value)">
+          <option value="all">状态：全部</option>
+          <option value="success">状态：成功</option>
+          <option value="failed">状态：失败</option>
+        </select>
+        <select><option>任务：全部</option><option>退款</option><option>改址</option><option>订单查询</option></select>
+        <select><option>Agent 版本：全部</option><option>v1.3.2</option><option>v1.3.1</option></select>
+        <select><option>时间：近 24 小时</option><option>近 7 天</option></select>
+        <button class="btn" onclick="toast('筛选条件已刷新（演示数据）')">刷新</button>
+      </div>
+
+      <div class="card">
+        <div class="hd"><b>运行记录</b><span class="tag t-gray" id="runVisibleCount">6 条演示数据</span><span class="small muted">成功与失败 Trace 使用同一份采集数据</span></div>
+        <table>
+          <thead><tr><th>Trace ID</th><th>状态</th><th>开始时间</th><th>任务</th><th>Agent 版本</th><th>步骤</th><th>耗时</th><th>关联信息</th></tr></thead>
+          <tbody id="runRows">
+            <tr class="click run-row" data-status="failed" onclick="openIncident()">
+              <td class="mono"><b>TRC-4a7c</b></td><td><span class="run-status failed">失败</span></td><td class="small">08-14 10:22:06</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>4.8s</td><td><span class="tag t-bad">事故 INC-0814-003</span></td>
+            </tr>
+            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-9f21','退款','08-14 08:17:42','2.4s')">
+              <td class="mono"><b>TRC-9f21</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 08:17:42</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>2.4s</td><td><span class="tag t-brand">推荐基线</span></td>
+            </tr>
+            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-a8de','退款','08-14 10:18:31','1.2s')">
+              <td class="mono"><b>TRC-a8de</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 10:18:31</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>1.2s</td><td class="muted small">—</td>
+            </tr>
+            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-b31f','退款','08-14 10:12:09','1.9s')">
+              <td class="mono"><b>TRC-b31f</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 10:12:09</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>1.9s</td><td class="muted small">—</td>
+            </tr>
+            <tr class="click run-row" data-status="failed" onclick="toast('该失败 Trace 已归入事故 INC-2026-0814-002（演示仅开放主事故详情）')">
+              <td class="mono"><b>TRC-c204</b></td><td><span class="run-status failed">失败</span></td><td class="small">08-14 09:47:18</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>4.5s</td><td><span class="tag t-bad">事故 INC-0814-002</span></td>
+            </tr>
+            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-d771','退款','08-14 09:41:55','2.1s')">
+              <td class="mono"><b>TRC-d771</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 09:41:55</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>2.1s</td><td class="muted small">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="run-empty" id="runEmpty">当前筛选条件下没有运行记录。</div>
+        <div class="bd small muted">点击成功 Trace 查看完整执行详情；点击失败 Trace 进入对应事故诊断。正式版支持游标分页与 Trace ID 搜索。</div>
+      </div>
+    </section>
+
+    <!-- ============ PAGE: normal trace detail ============ -->
+    <section class="page" id="pg-trace">
+      <div class="card mb10">
+        <div class="bd">
+          <div class="trace-hero">
+            <div>
+              <div class="run-status success">运行成功</div>
+              <h2 id="traceDetailTitle">退款 · TRC-9f21</h2>
+              <div class="small muted">本次执行未命中错误规则或人工告警，不生成候选原因。</div>
+            </div>
+            <div>
+              <button class="btn" onclick="go('runs')">← 返回运行记录</button>
+              <button class="btn pri" onclick="useTraceAsBaseline()">⇄ 设为对比基线</button>
+            </div>
+          </div>
+          <div class="trace-facts">
+            <div><div class="k">Trace ID</div><div class="v mono" id="traceDetailId">TRC-9f21</div></div>
+            <div><div class="k">开始时间</div><div class="v" id="traceDetailTime">08-14 08:17:42</div></div>
+            <div><div class="k">Agent 版本</div><div class="v mono">v1.3.2</div></div>
+            <div><div class="k">总耗时</div><div class="v" id="traceDetailDuration">2.4s</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="success-note mb10"><b>✓</b><div><b>本次运行正常</b><div class="small">完整 Trace 仍可用于采集核对、性能分析和成功/失败 Diff 基线，不进入事故复核流程。</div></div></div>
+
+      <div class="grid g2 mb10">
+        <div class="card">
+          <div class="hd"><b>输入与输出</b></div>
+          <div class="bd small">
+            <div class="fld"><label>用户输入</label><input class="ro" readonly value="退掉订单 #57904 的 ¥60"></div>
+            <div class="fld"><label>最终输出</label><input class="ro" readonly value="退款已受理，预计 1–3 个工作日到账"></div>
+            <div class="fld"><label>结果</label><input class="ro" readonly value="refund_api · HTTP 200 · refund_amount=60"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="hd"><b>运行摘要</b></div>
+          <div class="bd">
+            <table>
+              <tr><td class="muted">模型调用</td><td><b>2 次</b></td></tr>
+              <tr><td class="muted">工具调用</td><td><b>3 次 · 全部成功</b></td></tr>
+              <tr><td class="muted">Token</td><td><b>1,146</b></td></tr>
+              <tr><td class="muted">预估成本</td><td><b>¥0.018</b></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><b>完整 Trace</b><span class="small muted">正常执行也保留完整步骤、状态和工具结果</span></div>
+        <div class="bd ttree">
+          <div class="trow"><span class="mono muted">S1</span><span class="tag t-gray kind">ENTRY</span><span>用户请求：退款 ¥60</span><span class="dur">0ms</span></div>
+          <div class="trow"><span class="ind">├─</span><span class="mono muted">S2</span><span class="tag t-brand kind">AGENT</span><span>规划步骤 · 识别退款意图</span><span class="dur">286ms</span></div>
+          <div class="trow"><span class="ind">│&nbsp;&nbsp;├─</span><span class="mono muted">S3</span><span class="tag t-ok kind">TOOL</span><span>order_api · 实时查询订单，可退金额 ¥60</span><span class="dur">62ms</span></div>
+          <div class="trow"><span class="ind">│&nbsp;&nbsp;└─</span><span class="mono muted">S4</span><span class="tag t-model kind">LLM</span><span>生成退款计划 · amount=60</span><span class="dur">780ms</span></div>
+          <div class="trow"><span class="ind">├─</span><span class="mono muted">S5</span><span class="tag t-brand kind">HANDOFF</span><span>规划 → 退款执行</span><span class="dur">5ms</span></div>
+          <div class="trow"><span class="ind">├─</span><span class="mono muted">S6</span><span class="tag t-ok kind">TOOL</span><span>risk_check · 通过</span><span class="dur">118ms</span></div>
+          <div class="trow"><span class="ind">├─</span><span class="mono muted">S7</span><span class="tag t-model kind">LLM</span><span>构造退款参数 · refund_amount=60</span><span class="dur">654ms</span></div>
+          <div class="trow"><span class="ind">├─</span><span class="mono muted">S8</span><span class="tag t-ok kind">TOOL</span><span>refund_api · HTTP 200</span><span class="dur">341ms</span></div>
+          <div class="trow"><span class="ind">└─</span><span class="mono muted">S9</span><span class="tag t-gray kind">OUTPUT</span><span>生成成功回复</span><span class="dur">154ms</span></div>
+        </div>
+      </div>
+    </section>
 
     <!-- ============ PAGE: incidents ============ -->
     <section class="page show" id="pg-incidents">
@@ -296,42 +422,42 @@
         <select><option>簇：过期状态污染 (FM-01)</option><option>全部簇</option></select>
         <select><option>步骤：全部</option><option>规划</option><option>退款执行</option><option>知识检索</option></select>
         <select><option>时间：近 24 小时</option><option>近 7 天</option></select>
-        <select><option>裁决状态：全部</option><option>未裁决</option><option>已裁决</option></select>
+        <select><option>复核状态：全部</option><option>待复核</option><option>已复核</option></select>
         <select><option>置信度：全部</option><option>≥ 80%</option><option>40–80%</option></select>
       </div>
 
       <div class="card" id="incList">
         <div class="hd"><b>事故列表 · 过期状态污染（FM-01）</b><span class="tag t-gray">12 条</span></div>
         <table>
-          <thead><tr><th>事故 ID</th><th>时间</th><th>任务类型</th><th>症状</th><th>首故障点（候选）</th><th>置信度</th><th>裁决状态</th></tr></thead>
+          <thead><tr><th>事故 ID</th><th>时间</th><th>任务类型</th><th>症状</th><th>首故障点（候选）</th><th>置信度</th><th>复核状态</th></tr></thead>
           <tbody>
             <tr class="click" onclick="openIncident()">
               <td class="mono"><b>INC-2026-0814-003</b></td><td class="small">08-14 10:22</td><td>退款</td>
               <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot v3 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:86%;background:var(--rule)"></div></div>86%</div></td>
-              <td id="vstat-list"><span class="tag t-warn">未裁决</span></td>
+              <td id="vstat-list"><span class="tag t-warn">待复核</span></td>
             </tr>
             <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
               <td class="mono">INC-2026-0814-002</td><td class="small">08-14 09:47</td><td>退款</td>
               <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot v2 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:84%;background:var(--rule)"></div></div>84%</div></td>
-              <td><span class="tag t-warn">未裁决</span></td>
+              <td><span class="tag t-warn">待复核</span></td>
             </tr>
             <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
               <td class="mono">INC-2026-0813-041</td><td class="small">08-13 21:03</td><td>改址</td>
               <td>改址失败 · 地址版本冲突</td><td>记忆读取 · address_snapshot 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:79%;background:var(--rule)"></div></div>79%</div></td>
-              <td><span class="tag t-ok">成立 · 王工</span></td>
+              <td><span class="tag t-ok">已确认 · 王工</span></td>
             </tr>
             <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
               <td class="mono">INC-2026-0813-036</td><td class="small">08-13 18:30</td><td>退款</td>
               <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot 过期</td>
               <td><div class="conf"><div class="bar"><div class="fill" style="width:88%;background:var(--rule)"></div></div>88%</div></td>
-              <td><span class="tag t-ok">成立 · 李工</span></td>
+              <td><span class="tag t-ok">已确认 · 李工</span></td>
             </tr>
           </tbody>
         </table>
-        <div class="bd small muted">已裁决成立 2 条 → 判例库已收录同模式判例 INC-0813-036，用于本簇置信度加权。</div>
+        <div class="bd small muted">已确认根因 2 条 → 历史案例库已收录同模式案例 INC-0813-036，用于本簇置信度加权。</div>
       </div>
     </section>
 
@@ -340,7 +466,7 @@
       <!-- symptom -->
       <div class="card mb10">
         <div class="hd"><b>症状</b><span class="tag t-bad">ERROR</span><span class="mono small muted">INC-2026-0814-003 · TRC-4a7c</span>
-          <span style="margin-left:auto" id="vstat-wb"><span class="tag t-warn">未裁决</span></span></div>
+          <span style="margin-left:auto" id="vstat-wb"><span class="tag t-warn">待复核</span></span></div>
         <div class="symp">
           <div><div class="k">报错节点</div><div class="v" style="color:var(--bad)">S9 · refund_api 调用失败</div><div class="small muted mono mt10">HTTP 422 REFUND_AMOUNT_EXCEEDED<br>请求 ¥180 &gt; 可退 ¥60</div></div>
           <div><div class="k">影响范围</div><div class="v">9 会话 / 7 用户</div><div class="small muted mt10">近 24h 同模式 12 起</div></div>
@@ -384,7 +510,7 @@
               <div class="rank">1</div>
               <div style="flex:1">
                 <b>记忆快照过期：S3 读取 4 小时前的 order_snapshot v3，将失效的可退金额（¥180）注入下游</b>
-                <div class="small muted mt10" style="margin-top:3px">首故障点 S3 · 传播路径 S3→S4→S5→S7→S9 · 命中判例 INC-0813-036（同模式，裁决成立）</div>
+                <div class="small muted mt10" style="margin-top:3px">首故障点 S3 · 传播路径 S3→S4→S5→S7→S9 · 命中历史案例 INC-0813-036（同模式，已确认）</div>
               </div>
               <span class="tag t-rule">规则判定</span>
               <div class="conf"><div class="bar"><div class="fill" style="width:86%;background:var(--rule)"></div></div><b>86%</b></div>
@@ -396,10 +522,10 @@
               <div class="evi support"><div class="ei">📎</div><div><b>E2 · 状态 Diff</b>：快照中 <span class="mono">status=PAID, refundable_amount=180</span>；实时订单系统为 <span class="mono">status=PARTIALLY_REFUNDED, refundable_amount=60</span>（08-14 06:10 已部分退款 ¥120）。<br><span class="ref" onclick="go('diff')">↳ 查看成功/失败 Diff</span></div></div>
               <div class="evi support"><div class="ei">📎</div><div><b>E3 · 工具参数回溯</b>：S9 请求体 <span class="mono">refund_amount=180</span> 正是快照值；返回 <span class="mono">422 REFUND_AMOUNT_EXCEEDED (max_refundable=60)</span>。<br><span class="ref" onclick="hlSpan('S9')">↳ 跳转原始事件 S9 / spans#S9</span></div></div>
               <div class="evi support"><div class="ei">📎</div><div><b>E4 · 基线对比</b>：成功链 TRC-9f21 在同位置调用订单查询工具实时查询（而非记忆快照），拿到 <span class="mono">refundable_amount=60</span>，退款成功。<br><span class="ref" onclick="go('diff')">↳ 查看基线对比</span></div></div>
-              <div class="small" style="font-weight:700;margin:12px 0 8px;color:var(--warn)">反证（2）—— 完整对抗论证请进入庭审</div>
-              <div class="evi counter"><div class="ei">⚡</div><div><b>C1</b>：历史 3 条成功链同样读取了过期快照但未失败。<span class="muted">（控方回应见庭审）</span></div></div>
-              <div class="evi counter"><div class="ei">⚡</div><div><b>C2</b>：422 也可能由接口限流导致。<span class="muted">（控方回应见庭审）</span></div></div>
-              <div class="mt16"><button class="btn pri" onclick="go('court')">⚖ 进入根因庭审</button>
+              <div class="small" style="font-weight:700;margin:12px 0 8px;color:var(--warn)">反面证据与其他解释（2）—— 进入复核页查看完整分析</div>
+              <div class="evi counter"><div class="ei">⚡</div><div><b>C1</b>：历史 3 条成功链同样读取了过期快照但未失败。<span class="muted">（分析说明见复核页）</span></div></div>
+              <div class="evi counter"><div class="ei">⚡</div><div><b>C2</b>：422 也可能由接口限流导致。<span class="muted">（分析说明见复核页）</span></div></div>
+              <div class="mt16"><button class="btn pri" onclick="go('review')">✓ 进入诊断复核</button>
               <button class="btn" onclick="go('diff')">⇄ 成功/失败 Diff</button></div>
             </div>
           </div>
@@ -427,7 +553,7 @@
               <div class="rank">3</div>
               <div style="flex:1">
                 <b class="muted">线索（低置信度，已折叠）：退款接口限流</b>
-                <div class="small muted" style="margin-top:3px">置信度 22% &lt; 40% 阈值 · 仅供参考，不建议直接采信，庭审入口已禁用</div>
+                <div class="small muted" style="margin-top:3px">置信度 22% &lt; 40% 阈值 · 仅供参考，不建议直接采信，复核入口已禁用</div>
               </div>
               <span class="tag t-model">模型推断</span>
               <div class="conf"><div class="bar"><div class="fill" style="width:22%;background:#94a3b8"></div></div><b class="muted">22%</b></div>
@@ -435,7 +561,7 @@
             </div>
             <div class="body">
               <div class="evi counter"><div class="ei">⚡</div><div><b>反证充分</b>：响应码为 422 而非 429；响应头无 <span class="mono">Retry-After</span>；同时段该接口其余 214 次调用成功率 99.5%。</div></div>
-              <div class="mt10"><button class="btn disabled tip" data-tip="低置信度线索不进入庭审流程（异常 G-2）" onclick="return false">⚖ 进入根因庭审</button></div>
+              <div class="mt10"><button class="btn disabled tip" data-tip="低置信度线索不进入正式复核流程（异常 G-2）" onclick="return false">✓ 进入诊断复核</button></div>
             </div>
           </div>
 
@@ -463,7 +589,7 @@
     <section class="page" id="pg-diff">
       <div class="card mb10">
         <div class="hd"><b>成功 / 失败 Diff</b>
-          <span class="small muted">基线：TRC-9f21（自动推荐：同 Agent 版本 v1.3.2 · 同任务类型「退款」· 时间邻近 2h）</span>
+          <span class="small muted">基线：<span class="mono" id="diffBaselineId">TRC-9f21</span>（自动推荐：同 Agent 版本 v1.3.2 · 同任务类型「退款」· 时间邻近 2h）</span>
           <button class="btn" style="margin-left:auto;padding:5px 12px;font-size:12px" onclick="toast('演示原型仅内置一条推荐基线；正式版可从候选基线列表更换')">更换基线</button>
         </div>
         <div class="bd small muted">高亮行为差异项；带「证据」角标的差异被候选根因 1 引用。大字段仅对比哈希与摘要。</div>
@@ -479,7 +605,7 @@
             <div class="drow"><span class="dk">order_id</span><span class="mono">#58291</span></div>
             <div class="drow"><span class="dk">user_tier</span><span class="mono">VIP-2</span></div>
           </div>
-          <div><div class="dh pass">成功链 TRC-9f21（基线）</div>
+          <div><div class="dh pass">成功链 <span id="diffBaselineHead">TRC-9f21</span>（基线）</div>
             <div class="drow dif"><span class="dk">order.status</span><span class="dv mono">PARTIALLY_REFUNDED（实时查询）</span></div>
             <div class="drow dif"><span class="dk">refundable_amount</span><span class="dv mono">60</span></div>
             <div class="drow dif"><span class="dk">数据来源</span><span class="dv">tool · 订单查询工具实时查询</span></div>
@@ -522,50 +648,50 @@
           </div>
         </div>
       </div>
-      <button class="btn pri" onclick="go('court')">⚖ 差异已确认，进入根因庭审</button>
+      <button class="btn pri" onclick="go('review')">✓ 差异已确认，进入诊断复核</button>
       <button class="btn" onclick="go('workbench')">← 返回诊断工作台</button>
     </section>
 
-    <!-- ============ PAGE: court ============ -->
-    <section class="page" id="pg-court">
+    <!-- ============ PAGE: review ============ -->
+    <section class="page" id="pg-review">
       <div class="card mb10">
-        <div class="hd"><b>根因庭审 · 候选 1</b><span class="tag t-rule">规则判定 · 86%</span>
+        <div class="hd"><b>诊断复核 · 候选原因 1</b><span class="tag t-rule">规则判定 · 86%</span>
           <span class="small muted">记忆快照过期：S3 读取 4h 前的 order_snapshot v3，失效可退金额注入下游</span></div>
-        <div class="bd small muted">控方论证根因成立，辩方由独立通道<b>强制</b>生成反证。请阅读双方后裁决 —— 你的裁决将校准诊断器，并决定能否转为回归用例。</div>
+        <div class="bd small muted">系统并列展示支持证据、反面证据与其他解释。请核对原始记录后确认 —— 复核结果将用于校准诊断器，并决定能否转为回归用例。</div>
       </div>
 
-      <div class="court">
+      <div class="review">
         <div class="card side-p">
-          <div class="hd"><b style="color:var(--rule)">🔍 控方 · 论证成立</b></div>
+          <div class="hd"><b style="color:var(--rule)">支持该原因的证据</b></div>
           <div class="bd">
             <div class="evi support"><div class="ei">1️⃣</div><div><b>过期事实</b>：S3 读取的快照写入于 4h12m 前（15,120s），超过阈值 3,600s。<span class="tag t-rule">铁证 · 规则</span><br><span class="ref" onclick="go('workbench')">↳ events_memory#8821</span></div></div>
             <div class="evi support"><div class="ei">2️⃣</div><div><b>数据失效</b>：快照可退 ¥180，实时可退 ¥60 —— 期间发生过部分退款 ¥120（06:10）。<br><span class="ref" onclick="go('diff')">↳ 状态 Diff</span></div></div>
             <div class="evi support"><div class="ei">3️⃣</div><div><b>传播链完整</b>：¥180 从快照 → 计划（S4）→ 传参（S5）→ 参数（S7）→ 请求体（S9）逐步传递，每步均有事件记录，无其他来源写入。</div></div>
             <div class="evi support"><div class="ei">4️⃣</div><div><b>反事实成立</b>：基线成功链在同位置用实时查询取代快照，其余条件相同，结果成功。<br><span class="ref" onclick="go('diff')">↳ 基线对比</span></div></div>
-            <div class="small muted mt10">判例引用：INC-0813-036 同模式，08-13 由李工裁决「成立」。</div>
+            <div class="small muted mt10">历史案例：INC-0813-036 为同一模式，08-13 由李工复核确认为根因。</div>
           </div>
         </div>
         <div class="card side-d">
-          <div class="hd"><b style="color:var(--warn)">🛡 辩方 · 反证与替代解释</b></div>
+          <div class="hd"><b style="color:var(--warn)">反面证据与其他解释</b></div>
           <div class="bd">
-            <div class="evi counter"><div class="ei">⚡</div><div><b>C1 · 过期不必然失败</b>：近 7 天有 3 条链同样读取过期快照但执行成功。<div class="small muted mt10">控方回应：该 3 条链的订单在快照期间<b>未发生状态变更</b>，快照虽旧但未失效 —— 真正的因是「过期 <b>且</b> 期间状态已变更」。本事故满足两个条件。</div></div></div>
-            <div class="evi counter"><div class="ei">⚡</div><div><b>C2 · 替代解释：接口限流</b>：422 也可能是网关侧拒绝。<div class="small muted mt10">控方回应：错误码为业务码 REFUND_AMOUNT_EXCEEDED 而非 429；无 Retry-After 头；同时段该接口成功率 99.5%。</div></div></div>
-            <div class="evi" style="border-left:3px solid #94a3b8"><div class="ei">ℹ️</div><div class="muted"><b>辩方声明</b>：除上述两条外，未找到其他有效反证。（辩方无实质反证本身是对控方的强支持信号）</div></div>
+            <div class="evi counter"><div class="ei">⚡</div><div><b>C1 · 过期不必然失败</b>：近 7 天有 3 条链同样读取过期快照但执行成功。<div class="small muted mt10">分析：该 3 条链的订单在快照期间<b>未发生状态变更</b>，快照虽旧但未失效 —— 真正的因是「过期 <b>且</b> 期间状态已变更」。本事故满足两个条件。</div></div></div>
+            <div class="evi counter"><div class="ei">⚡</div><div><b>C2 · 其他解释：接口限流</b>：422 也可能是网关侧拒绝。<div class="small muted mt10">核对结果：错误码为业务码 REFUND_AMOUNT_EXCEEDED 而非 429；无 Retry-After 头；同时段该接口成功率 99.5%。</div></div></div>
+            <div class="evi" style="border-left:3px solid #94a3b8"><div class="ei">ℹ️</div><div class="muted"><b>分析说明</b>：除上述两条外，暂未找到其他有效反面证据；这会提高候选原因的可信度，但不替代人工复核。</div></div>
           </div>
         </div>
       </div>
 
-      <div class="verdictbar" id="verdictbar">
-        <div>⚖</div>
-        <div style="flex:1"><b>法官裁决</b><div class="small" style="color:#cbd5e1">裁决人：李工 · 裁决将写入校准日志与判例库，支持事后改判（保留历史）</div></div>
-        <button class="btn ok" onclick="verdict('upheld')">✔ 成立</button>
-        <button class="btn bad" onclick="verdict('rejected')">✘ 不成立</button>
-        <button class="btn" onclick="verdict('insufficient')">？ 证据不足</button>
+      <div class="reviewbar" id="reviewbar">
+        <div>✓</div>
+        <div style="flex:1"><b>复核结论</b><div class="small muted">复核人：李工 · 结果将写入校准日志与历史案例库，后续可重新复核并保留记录</div></div>
+        <button class="btn ok" onclick="submitReview('confirmed')">确认是根因</button>
+        <button class="btn bad" onclick="submitReview('excluded')">排除该原因</button>
+        <button class="btn" onclick="submitReview('insufficient')">暂需补充证据</button>
       </div>
       <div class="vd-done" id="vd-done">
-        <b><span class="stamp">成立</span>　已裁决</b> · 裁决人 李工 · 已写入校准日志与判例库。
+        <b><span class="status-check">✓</span>已确认是根因</b> · 复核人 李工 · 已写入校准日志与历史案例库。
         <div class="mt10"><button class="btn pri" onclick="openCaseModal()">▶ 一键转回归用例</button>
-        <button class="btn" onclick="toast('改判入口：保留本次裁决历史后重新裁决（异常 U-1）')">发起改判</button></div>
+        <button class="btn" onclick="toast('重新复核会保留本次结论及修改原因（异常 U-1）')">重新复核</button></div>
       </div>
     </section>
 
@@ -655,7 +781,7 @@
                 <td class="small">已按语义指纹去重，不影响展示；建议移除以降低采集开销</td>
                 <td><span class="pill-link" onclick="var g=document.getElementById('fix2');g.classList.toggle('show')">修复指引 ▾</span></td>
               </tr>
-              <tr><td colspan="4" style="padding:0 12px"><div class="fixguide" id="fix2">检测到 <span class="mono">CauseLensCallbackHandler</span> 与 <span class="mono">causelens.instrument()</span> 同时启用。保留框架插件即可，删除手动埋点：<span class="mono">causelens.instrument()  # ← 移除此行</span></div></td></tr>
+              <tr><td colspan="4" style="padding:0 12px"><div class="fixguide" id="fix2">检测到 <span class="mono">XunjiCallbackHandler</span> 与 <span class="mono">xunji.instrument()</span> 同时启用。保留框架插件即可，删除手动埋点：<span class="mono">xunji.instrument()  # ← 移除此行</span></div></td></tr>
             </tbody>
           </table>
           <div class="small muted mt10">体检每小时自动运行一次；四项得分作为诊断置信度的前置门槛 —— 完整度不足时，相关规则自动禁用并在工作台明示「数据不足」。</div>
@@ -671,9 +797,9 @@
           <table>
             <thead><tr><th>成员</th><th>角色</th><th>权限</th></tr></thead>
             <tbody>
-              <tr><td>李工（你）</td><td><span class="tag t-brand">裁决人</span></td><td class="small">诊断 / 裁决 / 改判 / 快照导出</td></tr>
-              <tr><td>王工</td><td><span class="tag t-brand">裁决人</span></td><td class="small">诊断 / 裁决 / 改判 / 快照导出</td></tr>
-              <tr><td>赵分析</td><td><span class="tag t-gray">分析师</span></td><td class="small">诊断 / 查看（不可裁决）</td></tr>
+              <tr><td>李工（你）</td><td><span class="tag t-brand">复核人</span></td><td class="small">诊断 / 复核 / 重新复核 / 快照导出</td></tr>
+              <tr><td>王工</td><td><span class="tag t-brand">复核人</span></td><td class="small">诊断 / 复核 / 重新复核 / 快照导出</td></tr>
+              <tr><td>赵分析</td><td><span class="tag t-gray">分析师</span></td><td class="small">诊断 / 查看（不可复核）</td></tr>
               <tr><td>产品-小陈</td><td><span class="tag t-gray">查看者</span></td><td class="small">只读</td></tr>
             </tbody>
           </table>
@@ -700,7 +826,7 @@
               <thead><tr><th>规则</th><th>阈值</th><th>状态</th></tr></thead>
               <tbody>
                 <tr><td class="small">失败模式簇 24h 新增</td><td class="mono small">≥ 10 起</td><td><span class="tag t-ok">启用</span></td></tr>
-                <tr><td class="small">诊断「成立率」周环比</td><td class="mono small">&lt; 40%</td><td><span class="tag t-ok">启用</span></td></tr>
+                <tr><td class="small">诊断「根因确认率」周环比</td><td class="mono small">&lt; 40%</td><td><span class="tag t-ok">启用</span></td></tr>
                 <tr><td class="small">体检完整度</td><td class="mono small">&lt; 80%</td><td><span class="tag t-ok">启用</span></td></tr>
               </tbody>
             </table>
@@ -724,8 +850,8 @@
   <div class="modal">
     <div class="mh">转回归用例 <span onclick="closeModal('m-case')">✕</span></div>
     <div class="mb">
-      <div class="small muted mb10">以下字段由裁决结论自动填充（无需人工字段映射）：</div>
-      <div class="fld"><label>来源事故</label><input class="ro" readonly value="INC-2026-0814-003 · 裁决：成立（记忆快照过期）"></div>
+      <div class="small muted mb10">以下字段由已确认的诊断结果自动填充（无需人工字段映射）：</div>
+      <div class="fld"><label>来源事故</label><input class="ro" readonly value="INC-2026-0814-003 · 已确认根因：记忆快照过期"></div>
       <div class="fld"><label>输入（脱敏后）</label><input class="ro" readonly value="用户请求：退掉订单 #58291 的 ¥180（手机号已掩码）"></div>
       <div class="fld"><label>上下文快照</label><input class="ro" readonly value="工具打桩：order_api / refund_api / risk_check 返回值 · 录制于 2026-08-14"></div>
       <div class="fld"><label>期望不变量（由根因自动反推）</label><input class="ro" readonly value="refund_amount ≤ live(refundable_amount)；snapshot_age(order) ≤ 3600s 方可作为金额来源"></div>
@@ -738,28 +864,28 @@
 
 <div class="mask" id="m-reject">
   <div class="modal">
-    <div class="mh">裁决：不成立 —— 请选择理由 <span onclick="closeModal('m-reject')">✕</span></div>
+    <div class="mh">排除该原因 —— 请选择理由 <span onclick="closeModal('m-reject')">✕</span></div>
     <div class="mb">
-      <div class="small muted mb10">理由将写入校准日志，用于修正诊断器（随手裁决会污染校准数据，因此理由必选）：</div>
+      <div class="small muted mb10">理由将写入校准日志，用于修正诊断器，因此需要选择一项：</div>
       <div class="radio">
         <label><input type="radio" name="rj" checked> 证据错误 —— 某条证据引用的事件与事实不符</label>
         <label><input type="radio" name="rj"> 因果不成立 —— 证据属实，但差异不解释本次失败</label>
         <label><input type="radio" name="rj"> 另有根因 —— 我可以指认正确根因（下一步选择 Span）</label>
       </div>
     </div>
-    <div class="mf"><button class="btn" onclick="closeModal('m-reject')">返回</button><button class="btn pri" onclick="closeModal('m-reject');toast('已记录「不成立」与理由，校准信号已更新（演示）')">提交裁决</button></div>
+    <div class="mf"><button class="btn" onclick="closeModal('m-reject')">返回</button><button class="btn pri" onclick="closeModal('m-reject');toast('已记录排除结论与理由，校准信号已更新（演示）')">提交复核</button></div>
   </div>
 </div>
 
 <div class="mask" id="m-insuff">
   <div class="modal">
-    <div class="mh">裁决：证据不足 —— 待补数据清单 <span onclick="closeModal('m-insuff')">✕</span></div>
+    <div class="mh">暂需补充证据 —— 待补数据清单 <span onclick="closeModal('m-insuff')">✕</span></div>
     <div class="mb">
       <div class="small muted mb10">系统根据缺口生成以下补采建议，补齐后可触发重新诊断：</div>
       <div class="evi"><div class="ei">📋</div><div><b>memory.expiry 字段</b> —— 当前快照无显式过期时间，过期判定依赖写入时间推算。<span class="small muted">接入指引 → 体检页</span></div></div>
       <div class="evi"><div class="ei">📋</div><div><b>订单系统变更事件</b> —— 若能采集订单状态变更流，可直接证明快照失效时点。</div></div>
     </div>
-    <div class="mf"><button class="btn" onclick="closeModal('m-insuff')">返回</button><button class="btn pri" onclick="closeModal('m-insuff');toast('已记录「证据不足」，待补数据清单已生成（演示）')">提交裁决</button></div>
+    <div class="mf"><button class="btn" onclick="closeModal('m-insuff')">返回</button><button class="btn pri" onclick="closeModal('m-insuff');toast('已记录「暂需补充证据」，待补数据清单已生成（演示）')">提交复核</button></div>
   </div>
 </div>
 
@@ -768,7 +894,7 @@
     <div class="mh">复核回归用例 REG-1041 <span onclick="closeModal('m-review')">✕</span></div>
     <div class="mb">
       <div class="small muted mb10">复核核心：确认自动反推的不变量是否恰当（过宽会漏报，过窄会误拦）。确认生效后，用例才参与门禁运行。</div>
-      <div class="fld"><label>来源事故与裁决（只读）</label><input class="ro" readonly value="INC-2026-0814-003 · 裁决：成立（记忆快照过期）· 裁决人 李工"></div>
+      <div class="fld"><label>来源事故与复核结论（只读）</label><input class="ro" readonly value="INC-2026-0814-003 · 已确认根因：记忆快照过期 · 复核人 李工"></div>
       <div class="fld"><label>快照录制（只读）</label><input class="ro" readonly value="工具打桩：order_api / refund_api / risk_check 返回值 · 录制于 2026-08-14"></div>
       <div class="fld"><label>期望不变量（可编辑 —— 复核的核心对象）</label><textarea id="revInv" rows="2">refund_amount ≤ live(refundable_amount)；
 snapshot_age(order) ≤ 3600s 时方可作为金额来源</textarea></div>
@@ -784,7 +910,7 @@ snapshot_age(order) ≤ 3600s 时方可作为金额来源</textarea></div>
 <div id="toast"></div>
 
 <script>
-var pageTitles={incidents:'事故列表',workbench:'诊断工作台 · INC-2026-0814-003',diff:'成功/失败 Diff · TRC-4a7c vs TRC-9f21',court:'根因庭审 · 候选 1',gate:'回归集与发布门禁',checkup:'接入与采集体检',settings:'设置'};
+var pageTitles={runs:'运行记录',trace:'正常 Trace 详情',incidents:'事故列表',workbench:'诊断工作台 · INC-2026-0814-003',diff:'成功/失败 Diff · TRC-4a7c vs TRC-9f21',review:'诊断复核 · 候选原因 1',gate:'回归集与发布门禁',checkup:'接入与采集体检',settings:'设置'};
 function go(p){
   document.querySelectorAll('.page').forEach(function(el){el.classList.remove('show')});
   document.getElementById('pg-'+p).classList.add('show');
@@ -794,6 +920,37 @@ function go(p){
   if(p==='gate'){var g=document.getElementById('gwarn');g.classList.remove('pulse');void g.offsetWidth;g.classList.add('pulse');}
 }
 document.querySelectorAll('#nav a').forEach(function(a){a.addEventListener('click',function(){go(a.dataset.page)})});
+
+function filterRuns(status){
+  var rows=Array.from(document.querySelectorAll('.run-row'));
+  var visible=0;
+  rows.forEach(function(row){
+    var show=status==='all'||row.dataset.status===status;
+    row.classList.toggle('hidden',!show);
+    if(show)visible++;
+  });
+  document.getElementById('runVisibleCount').textContent=visible+' 条演示数据';
+  document.getElementById('runEmpty').style.display=visible?'none':'block';
+}
+var activeTraceId='TRC-9f21';
+function openNormalTrace(id,task,time,duration){
+  activeTraceId=id;
+  document.getElementById('traceDetailTitle').textContent=task+' · '+id;
+  document.getElementById('traceDetailId').textContent=id;
+  document.getElementById('traceDetailTime').textContent=time;
+  document.getElementById('traceDetailDuration').textContent=duration;
+  go('trace');
+}
+function useTraceAsBaseline(){
+  var label=document.getElementById('diffBaselineId');
+  var head=document.getElementById('diffBaselineHead');
+  if(label)label.textContent=activeTraceId;
+  if(head)head.textContent=activeTraceId;
+  pageTitles.diff='成功/失败 Diff · TRC-4a7c vs '+activeTraceId;
+  go('diff');
+  toast('已将 '+activeTraceId+' 设为本次成功/失败对比基线');
+}
+
 function selectCluster(el){
   document.querySelectorAll('.cluster').forEach(function(c){c.classList.remove('selected')});
   el.classList.add('selected');
@@ -829,16 +986,16 @@ function hlSpan(s){
   }
   toast('已定位到原始事件 '+s+'（驻留高亮，可回看）');
 }
-var verdictDone=false;
-function verdict(v){
-  if(v==='upheld'){
-    verdictDone=true;
-    document.getElementById('verdictbar').style.display='none';
+var reviewDone=false;
+function submitReview(v){
+  if(v==='confirmed'){
+    reviewDone=true;
+    document.getElementById('reviewbar').style.display='none';
     document.getElementById('vd-done').classList.add('show');
-    document.getElementById('vstat-wb').innerHTML='<span class="tag t-ok">已裁决：成立 · 李工</span>';
-    document.getElementById('vstat-list').innerHTML='<span class="tag t-ok">成立 · 李工</span>';
-    toast('裁决「成立」已写入校准日志与判例库');
-  }else if(v==='rejected'){openModal('m-reject');}
+    document.getElementById('vstat-wb').innerHTML='<span class="tag t-ok">已确认根因 · 李工</span>';
+    document.getElementById('vstat-list').innerHTML='<span class="tag t-ok">已确认 · 李工</span>';
+    toast('复核结论已写入校准日志与历史案例库');
+  }else if(v==='excluded'){openModal('m-reject');}
   else{openModal('m-insuff');}
 }
 function openModal(id){document.getElementById(id).classList.add('show')}
