@@ -1,0 +1,23 @@
+# 对账 Agent 项目规则包（接入方声明的契约，产品侧只提供规则种类）
+# 对应 second-week/docs/08 §8.4：确定性问题由规则判定
+version: recon-demo-v1
+rules:
+  - id: R-ARG-001
+    kind: arg_schema
+    title: 核对步骤入参 Schema
+    match:
+      step_name: reconcile
+    required: [billing, payments]
+    numeric_fields: [amount, total]
+  - id: R-OUT-001
+    kind: output_contract
+    title: 核对步骤输出契约
+    match:
+      step_name: reconcile
+    required_fields: [total_billing, total_payments, discrepancies]
+  - id: R-OUT-002
+    kind: output_contract
+    title: 报告步骤输出契约
+    match:
+      step_name: write_report
+    required_fields: [report_path, total_billing, total_payments]

@@ -1,0 +1,11 @@
+# T1 默认规则包：任何项目都启用的通用规则（无需接入方配置）
+version: t1-default-v1
+rules:
+  - id: R-EXC-001
+    kind: exception_propagation
+    title: 异常/超时传播定位（取因果路径上最早的失败步骤）
+  - id: R-RET-001
+    kind: retrieval_empty
+    title: 检索/数据拉取空结果
+    match:
+      step_type: retrieval
