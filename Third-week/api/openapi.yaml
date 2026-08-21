@@ -1,0 +1,417 @@
+openapi: "3.0.3"
+info:
+  title: 寻迹 xunji API
+  version: "0.1.0"
+  description: >
+    T1 通用流诊断闭环 API。路径与 second-week/docs/08 §8.2 逐字一致；
+    x-status: deferred 表示本期未实现（保留契约）。鉴权/多租户为本期不做项。
+servers:
+  - url: http://127.0.0.1:8756
+paths:
+  /v1/traces:
+    post:
+      summary: Trace 接入（契约 JSON；OTLP protobuf 为目标形态，见 x-note）
+      x-note: 目标形态为 OTLP/HTTP protobuf；Demo 接收等价字段的 JSON 契约
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TraceContract" }
+      responses:
+        "202":
+          description: 已接收；含降级警告与触发的事故
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: integer }
+                  dropped: { type: integer }
+                  warnings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        span_id: { type: string, nullable: true }
+                        code:
+                          type: string
+                          enum: [missing_required, duplicate_span, broken_parent]
+                        message: { type: string }
+                  incidents:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        incident_id: { type: string }
+                        diagnosis_id: { type: string }
+  /v1/projects/{pid}/checkup:
+    get:
+      summary: 采集体检（完整度、断链、基线覆盖度）
+      parameters: [{ $ref: "#/components/parameters/pid" }]
+      responses:
+        "200":
+          description: 体检结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  span_count: { type: integer }
+                  trace_count: { type: integer }
+                  broken_links: { type: integer }
+                  baseline_coverage:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        agent_id: { type: string }
+                        agent_version: { type: string }
+                        baseline_available: { type: boolean }
+                        baseline_trace_id: { type: string, nullable: true }
+  /v1/projects/{pid}/traces:
+    get:
+      summary: 运行记录（成功与失败并存）
+      parameters:
+        - { $ref: "#/components/parameters/pid" }
+        - { name: execution_status, in: query, schema: { $ref: "#/components/schemas/ExecutionStatus" } }
+        - { name: quality_verdict, in: query, schema: { type: string, enum: [pass, failed] } }
+        - { name: agent, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 200, default: 50 } }
+      responses:
+        "200":
+          description: Trace 摘要列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: array
+                    items: { $ref: "#/components/schemas/TraceSummary" }
+  /v1/traces/{tid}:
+    get:
+      summary: Trace 详情（Span + 因果边 + 载荷摘录）
+      parameters: [{ name: tid, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: 详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trace_id: { type: string }
+                  incident_id: { type: string, nullable: true }
+                  spans:
+                    type: array
+                    items: { $ref: "#/components/schemas/Span" }
+                  edges:
+                    type: array
+                    items: { $ref: "#/components/schemas/CausalEdge" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/projects/{pid}/incidents:
+    get:
+      summary: 事故列表（携失败模式簇信息）
+      parameters:
+        - { $ref: "#/components/parameters/pid" }
+        - { name: review_status, in: query, schema: { $ref: "#/components/schemas/ReviewResult" } }
+      responses:
+        "200":
+          description: 事故列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  incidents:
+                    type: array
+                    items: { $ref: "#/components/schemas/Incident" }
+  /v1/incidents/{iid}/diagnosis:
+    get:
+      summary: 诊断快照（规则同步先出，模型异步补充）
+      parameters: [{ $ref: "#/components/parameters/iid" }]
+      responses:
+        "200":
+          description: 快照
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Diagnosis" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/incidents/{iid}/diagnosis/events:
+    get:
+      summary: 诊断增量（SSE；前端不支持时降级轮询上一接口）
+      parameters: [{ $ref: "#/components/parameters/iid" }]
+      responses:
+        "200":
+          description: text/event-stream，event=snapshot 直至 complete/failed
+          content:
+            text/event-stream:
+              schema: { type: string }
+  /v1/incidents/{iid}/diff:
+    get:
+      summary: 成功/失败 Diff（省略 baseline 时自动选最近兼容基线）
+      parameters:
+        - { $ref: "#/components/parameters/iid" }
+        - { name: baseline, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: 对比表；无基线时 available=false + 引导文案（冷启动降级）
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiffView" }
+  /v1/candidates/{cid}/review:
+    post:
+      summary: 提交复核（If-Match 乐观并发控制）
+      parameters:
+        - { name: cid, in: path, required: true, schema: { type: string } }
+        - { name: If-Match, in: header, required: true, schema: { type: integer },
+            description: 候选当前 version；不匹配返回 409 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result: { $ref: "#/components/schemas/ReviewResult" }
+                reason_code: { type: string, nullable: true }
+                correct_cause_ref:
+                  type: string
+                  nullable: true
+                  description: 候选全错/证据不足时人工指认真因（冷启动兜底）
+                decided_by: { type: string, default: demo-user }
+      responses:
+        "200":
+          description: 复核回执
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verdict_id: { type: string }
+                  candidate_version: { type: integer }
+                  result: { $ref: "#/components/schemas/ReviewResult" }
+        "409": { description: 并发冲突：候选已被复核，需刷新后重试 }
+        "422": { description: result 非法或候选不存在 }
+  /v1/incidents/{iid}/regression-case:
+    post:
+      summary: 转回归用例（仅 review_status=confirmed 允许）
+      parameters: [{ $ref: "#/components/parameters/iid" }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                suite_name: { type: string, default: 默认回归集 }
+      responses:
+        "200":
+          description: 用例（输入引用 + 不变量）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  case_id: { type: string }
+                  suite_id: { type: string }
+                  invariants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kind: { type: string, enum: [no_recurrence, quality_pass] }
+        "422": { description: 事故未确认根因 }
+  /v1/suites/{sid}/gate-run:
+    post:
+      summary: 门禁运行（评估该 release 全部运行；默认 warn 不阻断）
+      parameters: [{ name: sid, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [release]
+              properties:
+                release: { type: string }
+                mode: { type: string, enum: [warn, block], default: warn }
+      responses:
+        "200":
+          description: 门禁结论
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gate_run_id: { type: string }
+                  result: { type: string, enum: [pass, warn, block] }
+                  detail: { type: object }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/suites:
+    get:
+      summary: 回归集清单（含用例与最近门禁运行；前端 gate 页数据源）
+      responses:
+        "200":
+          description: 列表
+          content:
+            application/json:
+              schema: { type: object }
+components:
+  parameters:
+    pid: { name: pid, in: path, required: true, schema: { type: string } }
+    iid: { name: iid, in: path, required: true, schema: { type: string } }
+  responses:
+    NotFound: { description: 资源不存在 }
+  schemas:
+    ExecutionStatus: { type: string, enum: [success, error, timeout, running] }
+    QualityVerdict: { type: string, enum: [pass, failed, unevaluated] }
+    ReviewResult: { type: string, enum: [confirmed, excluded, insufficient] }
+    FailureType:
+      type: string
+      enum: [tool_arg_violation, output_contract_violation, exception,
+             timeout, retrieval_empty, quality_check_failed]
+    EvidenceGrade: { type: string, enum: [deterministic, diff_based, model_heuristic] }
+    StepType:
+      type: string
+      enum: [llm_call, tool_call, retrieval, validation, planning, other]
+    TraceContract:
+      type: object
+      required: [spans]
+      properties:
+        resource:
+          type: object
+          properties:
+            project_id: { type: string }
+            agent_id: { type: string }
+            agent_version: { type: string }
+            run_name: { type: string }
+            session_id: { type: string, nullable: true }
+            run_id: { type: string, nullable: true }
+        spans:
+          type: array
+          items:
+            type: object
+            required: [trace_id, span_id, ts]
+            properties:
+              trace_id: { type: string }
+              span_id: { type: string }
+              parent_span_id: { type: string, nullable: true }
+              ts: { type: string, format: date-time }
+              duration_ms: { type: integer, nullable: true }
+              step_type: { $ref: "#/components/schemas/StepType" }
+              raw_step_type: { type: string, nullable: true }
+              step_name: { type: string, nullable: true }
+              execution_status: { $ref: "#/components/schemas/ExecutionStatus" }
+              quality_verdict: { $ref: "#/components/schemas/QualityVerdict" }
+              input: { nullable: true }
+              output: { nullable: true }
+              attrs: { type: object }
+    TraceSummary:
+      type: object
+      properties:
+        trace_id: { type: string }
+        started_at: { type: string }
+        span_count: { type: integer }
+        agent_id: { type: string, nullable: true }
+        agent_version: { type: string, nullable: true }
+        run_name: { type: string, nullable: true }
+        execution_status: { type: string }
+        quality_verdict: { type: string }
+        incident_id: { type: string, nullable: true }
+    Span:
+      type: object
+      properties:
+        span_id: { type: string }
+        parent_span_id: { type: string, nullable: true }
+        ts: { type: string }
+        step_type: { $ref: "#/components/schemas/StepType" }
+        step_name: { type: string, nullable: true }
+        execution_status: { $ref: "#/components/schemas/ExecutionStatus" }
+        quality_verdict: { $ref: "#/components/schemas/QualityVerdict" }
+        input_payload: { type: string, nullable: true }
+        output_payload: { type: string, nullable: true }
+        link_kind: { type: string, nullable: true, description: normal|broken_parent }
+    CausalEdge:
+      type: object
+      properties:
+        src: { type: string }
+        dst: { type: string }
+        kind: { type: string, enum: [hierarchy, dataflow] }
+        confidence: { type: number, description: dataflow 启发式边 < 1.0 }
+    Incident:
+      type: object
+      properties:
+        id: { type: string }
+        trace_id: { type: string }
+        cluster_id: { type: string, nullable: true }
+        cluster_title: { type: string, nullable: true }
+        failure_type: { $ref: "#/components/schemas/FailureType" }
+        symptom_span_id: { type: string, nullable: true }
+        incident_status: { type: string, enum: [open, reviewed, converted, closed] }
+        review_status: { type: string }
+        evidence_grade: { $ref: "#/components/schemas/EvidenceGrade" }
+    Evidence:
+      type: object
+      description: span_ref 与 event_ref 至少其一存在（docs/08 硬约束）
+      properties:
+        side: { type: string, enum: [support, refute] }
+        kind: { type: string }
+        span_ref: { type: string, nullable: true }
+        event_ref: { type: string, nullable: true }
+        excerpt: { type: string }
+    Candidate:
+      type: object
+      properties:
+        id: { type: string }
+        rank: { type: integer }
+        cause_type: { $ref: "#/components/schemas/FailureType" }
+        summary: { type: string }
+        evidence_grade: { $ref: "#/components/schemas/EvidenceGrade" }
+        source: { type: string, enum: [rule, diff, model] }
+        first_fault_span_id: { type: string, nullable: true }
+        version: { type: integer, description: If-Match 并发控制版本 }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/Evidence" }
+        verdict: { type: object, nullable: true }
+    Diagnosis:
+      type: object
+      properties:
+        diagnosis_id: { type: string }
+        status: { type: string, enum: [pending, partial, complete, failed] }
+        rule_pack_version: { type: string, nullable: true }
+        model_version: { type: string, nullable: true }
+        failure_reason:
+          type: string
+          nullable: true
+          description: 模型失败原因（model:*）或 diff 降级原因（diff:no_baseline）
+        candidates:
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/Candidate" }
+    DiffView:
+      type: object
+      properties:
+        available: { type: boolean }
+        reason: { type: string, nullable: true }
+        message: { type: string, nullable: true }
+        baseline_trace_id: { type: string }
+        failed_trace_id: { type: string }
+        first_divergence_span_id: { type: string, nullable: true }
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              step_name: { type: string }
+              baseline: { type: object }
+              failed: { type: object }
+              divergences:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    key: { type: string }
+                    baseline: {}
+                    failed: {}

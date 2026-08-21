@@ -1,0 +1,81 @@
+/** React Query hooks（组件通过 hooks 取数，不直连 API 层之下） */
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { xunjiApi } from "../api/xunjiApi";
+
+export function useTraces(filters?: Record<string, string>) {
+  return useQuery({
+    queryKey: ["traces", filters],
+    queryFn: () => xunjiApi.listTraces(filters),
+    refetchInterval: 5000,
+  });
+}
+
+export function useTraceDetail(traceId: string | null) {
+  return useQuery({
+    queryKey: ["trace", traceId],
+    queryFn: () => xunjiApi.traceDetail(traceId!),
+    enabled: !!traceId,
+  });
+}
+
+export function useIncidents() {
+  return useQuery({
+    queryKey: ["incidents"],
+    queryFn: xunjiApi.listIncidents,
+    refetchInterval: 5000,
+  });
+}
+
+/** 诊断快照：规则结果先渲染，模型阶段未完时持续轮询（SSE 的降级路径，spec 决策） */
+export function useDiagnosis(incidentId: string | null) {
+  return useQuery({
+    queryKey: ["diagnosis", incidentId],
+    queryFn: () => xunjiApi.diagnosis(incidentId!),
+    enabled: !!incidentId,
+    refetchInterval: (query) =>
+      query.state.data && ["complete", "failed"].includes(query.state.data.status)
+        ? false
+        : 1000,
+  });
+}
+
+export function useDiff(incidentId: string | null) {
+  return useQuery({
+    queryKey: ["diff", incidentId],
+    queryFn: () => xunjiApi.diff(incidentId!),
+    enabled: !!incidentId,
+  });
+}
+
+export function useReview(incidentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { candidateId: string; version: number; result: string; reason?: string }) =>
+      xunjiApi.review(p.candidateId, p.version, p.result, p.reason),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["diagnosis", incidentId] });
+      qc.invalidateQueries({ queryKey: ["incidents"] });
+    },
+  });
+}
+
+export function useToRegression(incidentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (suiteName: string) => xunjiApi.toRegression(incidentId, suiteName),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["suites"] }),
+  });
+}
+
+export function useSuites() {
+  return useQuery({ queryKey: ["suites"], queryFn: xunjiApi.listSuites });
+}
+
+export function useGateRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { suiteId: string; release: string; mode: string }) =>
+      xunjiApi.gateRun(p.suiteId, p.release, p.mode),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["suites"] }),
+  });
+}

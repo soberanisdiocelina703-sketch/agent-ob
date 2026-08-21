@@ -1,0 +1,32 @@
+{
+  "name": "xunji-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "@testing-library/user-event": "^14.6.5",
+    "axios": "^1.7.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^18.3.14",
+    "@types/react-dom": "^18.3.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^25.0.1",
+    "msw": "^2.6.8",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.8"
+  }
+}
