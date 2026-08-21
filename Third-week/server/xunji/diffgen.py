@@ -147,3 +147,34 @@ def generate_diff_finding(conn: sqlite3.Connection, g: Graph,
                        "excerpt": json.dumps(missing, ensure_ascii=False)}],
         ), "ok"
     return None, "no_divergence"
+
+
+def compare_table(conn: sqlite3.Connection, failed_trace_id: str,
+                  baseline_trace_id: str) -> dict:
+    """Step-aligned comparison for the前端 Diff 视图 (field-level table)."""
+    base_steps = _outputs_by_step(conn, baseline_trace_id)
+    fail_steps = _outputs_by_step(conn, failed_trace_id)
+    base_by_name = {name: (sid, out) for sid, name, out in base_steps}
+    fail_names = {name for _, name, _ in fail_steps}
+
+    rows = []
+    first_divergence = None
+    for span_id, step_name, output in fail_steps:
+        base = base_by_name.get(step_name)
+        divs = _diverging_keys(base[1], output) if base else []
+        if divs and first_divergence is None:
+            first_divergence = span_id
+        rows.append({
+            "step_name": step_name,
+            "failed": {"span_id": span_id, "output": output},
+            "baseline": {"span_id": base[0], "output": base[1]} if base
+            else {"span_id": None, "output": None, "note": "基线无此步骤"},
+            "divergences": divs,
+        })
+    for sid, name, out in base_steps:
+        if name not in fail_names:
+            rows.append({"step_name": name, "failed": {"span_id": None, "output": None,
+                                                       "note": "失败链缺少此步骤"},
+                         "baseline": {"span_id": sid, "output": out}, "divergences": []})
+    return {"baseline_trace_id": baseline_trace_id, "failed_trace_id": failed_trace_id,
+            "steps": rows, "first_divergence_span_id": first_divergence}
