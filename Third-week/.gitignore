@@ -1,0 +1,15 @@
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+web/dist/
+web/coverage/
+data/
+*.db
+.claude/worktrees/
+.ruff_cache/
+fixtures/raw/

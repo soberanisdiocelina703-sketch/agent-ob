@@ -1,0 +1,14 @@
+{
+  "name": "xunji-third-week",
+  "private": true,
+  "version": "0.1.0",
+  "description": "寻迹 T1 通用流诊断最小闭环 — 一键命令入口",
+  "scripts": {
+    "demo": "python scripts/demo.py",
+    "demo-run": "python scripts/demo_run.py",
+    "demo-offline": "python scripts/demo_offline.py",
+    "check": "python scripts/check.py",
+    "test:server": "python -m pytest server/tests sdk/tests agent/tests -q",
+    "test:e2e": "python -m pytest e2e -q"
+  }
+}
