@@ -61,7 +61,8 @@ def aggregate(raw_candidates: list[dict]) -> tuple[list[dict], int]:
         else:
             merged[key] = c
 
-    ranked = sorted(merged.values(), key=lambda c: -c["raw_score"])[:TOP_N]
+    ranked = sorted(merged.values(),
+                    key=lambda c: (-c["raw_score"], c.get("fault_ts") or "￿"))[:TOP_N]
     for i, c in enumerate(ranked):
         c["rank"] = i + 1
     return ranked, dropped
@@ -112,6 +113,7 @@ def run_sync_diagnosis(conn: sqlite3.Connection, incident: dict) -> str:
             "source": CandidateSource.RULE.value, "cause_type": f.cause_type,
             "summary": f.summary, "first_fault_span_id": f.first_fault_span_id,
             "evidence": f.evidence,
+            "fault_ts": g.spans.get(f.first_fault_span_id, {}).get("ts"),
             "causal_path": upstream_path(g, symptom) if symptom in g.spans else [],
         })
 

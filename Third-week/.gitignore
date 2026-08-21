@@ -13,3 +13,4 @@ data/
 .claude/worktrees/
 .ruff_cache/
 fixtures/raw/
+agent/workdir/
