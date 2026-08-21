@@ -1,0 +1,313 @@
+{
+  "resource": {
+    "project_id": "recon-demo",
+    "agent_id": "recon-agent",
+    "agent_version": "1.0.0",
+    "run_name": "daily-recon",
+    "session_id": "7621d649-1d77-4191-8904-8e211b912229",
+    "run_id": "fx-normal"
+  },
+  "spans": [
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-root",
+      "parent_span_id": null,
+      "ts": "2026-08-21T07:14:17.502286+00:00",
+      "step_type": "planning",
+      "raw_step_type": "claude_code_run",
+      "step_name": "agent_run",
+      "execution_status": "success",
+      "duration_ms": 46568
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-llm-1",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:17.702286+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "我将按顺序执行财务对账流程的5个命令。\n\n**步骤 1：获取账单数据**"
+      }
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-tool-2-0",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:17.902286+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "fetch_billing",
+      "execution_status": "success",
+      "input": {
+        "source": "billing_api",
+        "date": "2026-08-21"
+      },
+      "output": {
+        "rows": 12,
+        "total": 48210.5,
+        "generated_at": "2026-08-21"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-llm-3",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:18.102286+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "步骤 1 成功：账单 12 笔，总额 48210.5。\n\n**步骤 2：获取支付数据**"
+      }
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-tool-4-0",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:18.302286+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "fetch_payments",
+      "execution_status": "success",
+      "input": {
+        "source": "payments_gateway",
+        "date": "2026-08-21"
+      },
+      "output": {
+        "rows": 12,
+        "total": 48210.5,
+        "generated_at": "2026-08-21"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-llm-5",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:18.502286+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "步骤 2 成功：支付 12 笔，总额 48210.5。\n\n**步骤 3：执行对账**"
+      }
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-tool-6-0",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:18.702286+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "reconcile",
+      "execution_status": "success",
+      "input": {
+        "billing": [
+          {
+            "order_id": "B001",
+            "amount": 4300.5
+          },
+          {
+            "order_id": "B002",
+            "amount": 2210.0
+          },
+          {
+            "order_id": "B003",
+            "amount": 5120.75
+          },
+          {
+            "order_id": "B004",
+            "amount": 3999.25
+          },
+          {
+            "order_id": "B005",
+            "amount": 1875.0
+          },
+          {
+            "order_id": "B006",
+            "amount": 6200.0
+          },
+          {
+            "order_id": "B007",
+            "amount": 2750.5
+          },
+          {
+            "order_id": "B008",
+            "amount": 3311.0
+          },
+          {
+            "order_id": "B009",
+            "amount": 4890.25
+          },
+          {
+            "order_id": "B010",
+            "amount": 5100.0
+          },
+          {
+            "order_id": "B011",
+            "amount": 4453.25
+          },
+          {
+            "order_id": "B012",
+            "amount": 4000.0
+          }
+        ],
+        "payments": [
+          {
+            "pay_id": "P001",
+            "order_id": "B001",
+            "amount": 4300.5
+          },
+          {
+            "pay_id": "P002",
+            "order_id": "B002",
+            "amount": 2210.0
+          },
+          {
+            "pay_id": "P003",
+            "order_id": "B003",
+            "amount": 5120.75
+          },
+          {
+            "pay_id": "P004",
+            "order_id": "B004",
+            "amount": 3999.25
+          },
+          {
+            "pay_id": "P005",
+            "order_id": "B005",
+            "amount": 1875.0
+          },
+          {
+            "pay_id": "P006",
+            "order_id": "B006",
+            "amount": 6200.0
+          },
+          {
+            "pay_id": "P007",
+            "order_id": "B007",
+            "amount": 2750.5
+          },
+          {
+            "pay_id": "P008",
+            "order_id": "B008",
+            "amount": 3311.0
+          },
+          {
+            "pay_id": "P009",
+            "order_id": "B009",
+            "amount": 4890.25
+          },
+          {
+            "pay_id": "P010",
+            "order_id": "B010",
+            "amount": 5100.0
+          },
+          {
+            "pay_id": "P011",
+            "order_id": "B011",
+            "amount": 4453.25
+          },
+          {
+            "pay_id": "P012",
+            "order_id": "B012",
+            "amount": 4000.0
+          }
+        ]
+      },
+      "output": {
+        "total_billing": 48210.5,
+        "total_payments": 48210.5,
+        "discrepancies": []
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-llm-7",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:18.902286+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "步骤 3 成功：账单与支付总额一致，差异 0 笔。\n\n**步骤 4：写入报告**"
+      }
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-tool-8-0",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:19.102286+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "write_report",
+      "execution_status": "success",
+      "input": {
+        "recon_file": "recon.json"
+      },
+      "output": {
+        "report_path": "D:\\Projects\\Agent-Tracing\\Third-week\\agent\\workdir\\report.json",
+        "total_billing": 48210.5,
+        "total_payments": 48210.5,
+        "discrepancy_count": 0
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-llm-9",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:19.302286+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "步骤 4 成功：报告已写入 workdir/report.json。\n\n**步骤 5：校验报告**"
+      }
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-tool-10-0",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:19.502286+00:00",
+      "step_type": "validation",
+      "raw_step_type": "PowerShell",
+      "step_name": "validate_report",
+      "execution_status": "success",
+      "input": {
+        "report": "report.json",
+        "billing_rows": 12,
+        "payment_rows": 12
+      },
+      "output": {
+        "balanced": true,
+        "delta": 0.0,
+        "payments_generated_at": "2026-08-21"
+      },
+      "quality_verdict": "pass",
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-normal",
+      "span_id": "fx-normal-llm-11",
+      "parent_span_id": "fx-normal-root",
+      "ts": "2026-08-21T07:14:19.702286+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "五个步骤全部执行完毕。\n\n对账结果：账单与支付各 12 笔，总额均为 48210.5，两侧完全一致，差异 0 笔。报告已写入 `workdir/report.json`，校验通过（balanced=true，delta=0.0，quality=pass）。"
+      }
+    }
+  ]
+}

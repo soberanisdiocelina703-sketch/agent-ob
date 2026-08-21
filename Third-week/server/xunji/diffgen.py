@@ -47,8 +47,12 @@ def find_baseline(conn: sqlite3.Connection, project_id: str, agent_id: str,
 
 
 def _outputs_by_step(conn: sqlite3.Connection, trace_id: str) -> list[tuple[str, str, dict | str | None]]:
+    # llm_call/planning 步骤的自然语言输出每次运行必然漂移，进入对照只会
+    # 制造伪分歧（真实录制数据实证，见 retro-log 2026-08-21）——只比工具类步骤
     rows = conn.execute(
-        "SELECT span_id, step_name, output_ref FROM spans WHERE trace_id=? ORDER BY ts, span_id",
+        """SELECT span_id, step_name, output_ref FROM spans
+           WHERE trace_id=? AND step_type NOT IN ('llm_call', 'planning')
+           ORDER BY ts, span_id""",
         (trace_id,),
     ).fetchall()
     result = []

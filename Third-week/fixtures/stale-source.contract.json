@@ -1,0 +1,314 @@
+{
+  "resource": {
+    "project_id": "recon-demo",
+    "agent_id": "recon-agent",
+    "agent_version": "1.0.0",
+    "run_name": "daily-recon",
+    "session_id": "ae0586db-9daf-42c6-b450-ebf90830b40d",
+    "run_id": "fx-stale-source"
+  },
+  "spans": [
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-root",
+      "parent_span_id": null,
+      "ts": "2026-08-21T07:14:17.504283+00:00",
+      "step_type": "planning",
+      "raw_step_type": "claude_code_run",
+      "step_name": "agent_run",
+      "execution_status": "success",
+      "duration_ms": 40240
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-llm-1",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:17.704283+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "I'll execute these one at a time, checking each output before proceeding."
+      }
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-tool-2-0",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:17.904283+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "fetch_billing",
+      "execution_status": "success",
+      "input": {
+        "source": "billing_api",
+        "date": "2026-08-21"
+      },
+      "output": {
+        "rows": 12,
+        "total": 48210.5,
+        "generated_at": "2026-08-21"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-llm-3",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:18.104283+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 1 done: billing fetched, 12 rows, total 48210.50."
+      }
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-tool-4-0",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:18.304283+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "fetch_payments",
+      "execution_status": "success",
+      "input": {
+        "source": "payments_gateway",
+        "date": "2026-08-21"
+      },
+      "output": {
+        "rows": 10,
+        "total": 39757.25,
+        "generated_at": "2026-08-20"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-llm-5",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:18.504283+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 2 done: payments fetched, 10 rows, total 39757.25. Note: its `generated_at` is 2026-08-20, a day behind billing's 2026-08-21."
+      }
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-tool-6-0",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:18.704283+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "reconcile",
+      "execution_status": "success",
+      "input": {
+        "billing": [
+          {
+            "order_id": "B001",
+            "amount": 4300.5
+          },
+          {
+            "order_id": "B002",
+            "amount": 2210.0
+          },
+          {
+            "order_id": "B003",
+            "amount": 5120.75
+          },
+          {
+            "order_id": "B004",
+            "amount": 3999.25
+          },
+          {
+            "order_id": "B005",
+            "amount": 1875.0
+          },
+          {
+            "order_id": "B006",
+            "amount": 6200.0
+          },
+          {
+            "order_id": "B007",
+            "amount": 2750.5
+          },
+          {
+            "order_id": "B008",
+            "amount": 3311.0
+          },
+          {
+            "order_id": "B009",
+            "amount": 4890.25
+          },
+          {
+            "order_id": "B010",
+            "amount": 5100.0
+          },
+          {
+            "order_id": "B011",
+            "amount": 4453.25
+          },
+          {
+            "order_id": "B012",
+            "amount": 4000.0
+          }
+        ],
+        "payments": [
+          {
+            "pay_id": "P001",
+            "order_id": "B001",
+            "amount": 4300.5
+          },
+          {
+            "pay_id": "P002",
+            "order_id": "B002",
+            "amount": 2210.0
+          },
+          {
+            "pay_id": "P003",
+            "order_id": "B003",
+            "amount": 5120.75
+          },
+          {
+            "pay_id": "P004",
+            "order_id": "B004",
+            "amount": 3999.25
+          },
+          {
+            "pay_id": "P005",
+            "order_id": "B005",
+            "amount": 1875.0
+          },
+          {
+            "pay_id": "P006",
+            "order_id": "B006",
+            "amount": 6200.0
+          },
+          {
+            "pay_id": "P007",
+            "order_id": "B007",
+            "amount": 2750.5
+          },
+          {
+            "pay_id": "P008",
+            "order_id": "B008",
+            "amount": 3311.0
+          },
+          {
+            "pay_id": "P009",
+            "order_id": "B009",
+            "amount": 4890.25
+          },
+          {
+            "pay_id": "P010",
+            "order_id": "B010",
+            "amount": 5100.0
+          }
+        ]
+      },
+      "output": {
+        "total_billing": 48210.5,
+        "total_payments": 39757.25,
+        "discrepancies": [
+          {
+            "order_id": "B011",
+            "amount": 4453.25,
+            "reason": "未见支付流水"
+          },
+          {
+            "order_id": "B012",
+            "amount": 4000.0,
+            "reason": "未见支付流水"
+          }
+        ]
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-llm-7",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:18.904283+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 3 done: reconcile found 2 discrepancies (B011, B012 — 无对应支付流水), billing total 48210.50 vs payments 39757.25."
+      }
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-tool-8-0",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:19.104283+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "write_report",
+      "execution_status": "success",
+      "input": {
+        "recon_file": "recon.json"
+      },
+      "output": {
+        "report_path": "D:\\Projects\\Agent-Tracing\\Third-week\\agent\\workdir\\report.json",
+        "total_billing": 48210.5,
+        "total_payments": 39757.25,
+        "discrepancy_count": 2
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-llm-9",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:19.304283+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 4 done: report written to `agent/workdir/report.json`, discrepancy_count 2."
+      }
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-tool-10-0",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:19.504283+00:00",
+      "step_type": "validation",
+      "raw_step_type": "PowerShell",
+      "step_name": "validate_report",
+      "execution_status": "success",
+      "input": {
+        "report": "report.json",
+        "billing_rows": 12,
+        "payment_rows": 10
+      },
+      "output": {
+        "balanced": false,
+        "delta": 8453.25,
+        "payments_generated_at": "2026-08-20"
+      },
+      "quality_verdict": "failed",
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-stale-source",
+      "span_id": "fx-stale-source-llm-11",
+      "parent_span_id": "fx-stale-source-root",
+      "ts": "2026-08-21T07:14:19.704283+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "All five steps executed in order.\n\n对账结果：账单总额 48210.50，支付总额 39757.25，两者相差 8453.25，共 2 笔差异（B011 4453.25、B012 4000.00，均为「未见支付流水」）。校验未通过（balanced=false，quality=failed）。另需留意支付数据的 `generated_at` 为 2026-08-20，比账单晚了一天，差异可能与支付流水尚未完整同步有关——但我未修改任何数据，以上仅为如实报告。"
+      }
+    }
+  ]
+}

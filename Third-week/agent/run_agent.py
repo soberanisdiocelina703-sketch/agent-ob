@@ -26,21 +26,23 @@ def run(inject: str, server: str, archive: str | None = None,
     env = {**os.environ, "XUNJI_INJECT": inject,
            "XUNJI_WORKDIR": str(workdir),
            "PYTHONPATH": str(ROOT / "sdk")}
-    prompt = (AGENT_DIR / "task_prompt.md").read_text(encoding="utf-8")
 
     cmd = [
         sys.executable, "-m", "xunji_sdk.cli", "run",
         "--project", "recon-demo", "--agent-id", "recon-agent",
         "--agent-version", agent_version, "--run-name", "daily-recon",
         "--server", server,
+        "--stdin-file", str(AGENT_DIR / "task_prompt.md"),
     ]
     if archive:
-        cmd += ["--archive", archive]
+        cmd += ["--archive", str(Path(archive).resolve())]  # cwd 切到 agent 目录，须绝对路径
     cmd += [
         "--",
-        "claude", "-p", prompt,
+        "claude", "-p",
         "--output-format", "stream-json", "--verbose",
-        "--allowedTools", "Bash", "--max-turns", "25",
+        # 窄授权：仅放行 python 工具命令（Windows 下内置终端工具为 PowerShell）
+        "--allowedTools", "PowerShell(python:*)", "Bash(python:*)",
+        "--max-turns", "25",
     ]
     print(f"[agent] inject={inject} version={agent_version} → claude -p (真实执行)")
     return subprocess.call(cmd, cwd=str(AGENT_DIR), env=env)

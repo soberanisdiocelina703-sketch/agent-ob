@@ -1,0 +1,308 @@
+{
+  "resource": {
+    "project_id": "recon-demo",
+    "agent_id": "recon-agent",
+    "agent_version": "1.0.0",
+    "run_name": "daily-recon",
+    "session_id": "be757047-5a2c-4c93-b8d0-efd9da467eab",
+    "run_id": "fx-broken-contract"
+  },
+  "spans": [
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-root",
+      "parent_span_id": null,
+      "ts": "2026-08-21T07:14:17.505284+00:00",
+      "step_type": "planning",
+      "raw_step_type": "claude_code_run",
+      "step_name": "agent_run",
+      "execution_status": "success",
+      "duration_ms": 59696
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-llm-1",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:17.705284+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "I'll run these one at a time and check each output before moving on. First, let me confirm the tools exist."
+      }
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-tool-2-0",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:17.905284+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "Glob",
+      "step_name": "Glob",
+      "execution_status": "success",
+      "input": {
+        "pattern": "tools/*.py"
+      },
+      "output": {
+        "text": "tools\\common.py\ntools\\fetch_billing.py\ntools\\fetch_payments.py\ntools\\reconcile.py\ntools\\write_report.py\ntools\\validate_report.py"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-llm-3",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:18.105284+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "All five tools are present. Running step 1."
+      }
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-tool-4-0",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:18.305284+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "fetch_billing",
+      "execution_status": "success",
+      "input": {
+        "source": "billing_api",
+        "date": "2026-08-21"
+      },
+      "output": {
+        "rows": 12,
+        "total": 48210.5,
+        "generated_at": "2026-08-21"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-llm-5",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:18.505284+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 1 done: 12 billing rows, total 48210.5. Running step 2."
+      }
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-tool-6-0",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:18.705284+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "fetch_payments",
+      "execution_status": "success",
+      "input": {
+        "source": "payments_gateway",
+        "date": "2026-08-21"
+      },
+      "output": {
+        "rows": 12,
+        "total": 48210.5,
+        "generated_at": "2026-08-21"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-llm-7",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:18.905284+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 2 done: 12 payment rows, total 48210.5. Running step 3."
+      }
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-tool-8-0",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:19.105284+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "reconcile",
+      "execution_status": "success",
+      "input": {
+        "billing": [
+          {
+            "order_id": "B001",
+            "amount": 4300.5
+          },
+          {
+            "order_id": "B002",
+            "amount": 2210.0
+          },
+          {
+            "order_id": "B003",
+            "amount": 5120.75
+          },
+          {
+            "order_id": "B004",
+            "amount": 3999.25
+          },
+          {
+            "order_id": "B005",
+            "amount": 1875.0
+          },
+          {
+            "order_id": "B006",
+            "amount": 6200.0
+          },
+          {
+            "order_id": "B007",
+            "amount": 2750.5
+          },
+          {
+            "order_id": "B008",
+            "amount": 3311.0
+          },
+          {
+            "order_id": "B009",
+            "amount": 4890.25
+          },
+          {
+            "order_id": "B010",
+            "amount": 5100.0
+          },
+          {
+            "order_id": "B011",
+            "amount": 4453.25
+          },
+          {
+            "order_id": "B012",
+            "amount": 4000.0
+          }
+        ],
+        "payments": [
+          {
+            "pay_id": "P001",
+            "order_id": "B001",
+            "amount": 4300.5
+          },
+          {
+            "pay_id": "P002",
+            "order_id": "B002",
+            "amount": 2210.0
+          },
+          {
+            "pay_id": "P003",
+            "order_id": "B003",
+            "amount": 5120.75
+          },
+          {
+            "pay_id": "P004",
+            "order_id": "B004",
+            "amount": 3999.25
+          },
+          {
+            "pay_id": "P005",
+            "order_id": "B005",
+            "amount": 1875.0
+          },
+          {
+            "pay_id": "P006",
+            "order_id": "B006",
+            "amount": 6200.0
+          },
+          {
+            "pay_id": "P007",
+            "order_id": "B007",
+            "amount": 2750.5
+          },
+          {
+            "pay_id": "P008",
+            "order_id": "B008",
+            "amount": 3311.0
+          },
+          {
+            "pay_id": "P009",
+            "order_id": "B009",
+            "amount": 4890.25
+          },
+          {
+            "pay_id": "P010",
+            "order_id": "B010",
+            "amount": 5100.0
+          },
+          {
+            "pay_id": "P011",
+            "order_id": "B011",
+            "amount": 4453.25
+          },
+          {
+            "pay_id": "P012",
+            "order_id": "B012",
+            "amount": 4000.0
+          }
+        ]
+      },
+      "output": {
+        "total_billing": 48210.5,
+        "total_payments": 48210.5
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-llm-9",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:19.305284+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 3 done: billing and payments totals both 48210.5, no differences. Running step 4."
+      }
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-tool-10-0",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:19.505284+00:00",
+      "step_type": "tool_call",
+      "raw_step_type": "PowerShell",
+      "step_name": "write_report",
+      "execution_status": "error",
+      "input": {
+        "recon_file": "recon.json",
+        "present_keys": [
+          "total_billing",
+          "total_payments"
+        ]
+      },
+      "output": {
+        "error": "核对结果缺少必需字段: 'discrepancies'"
+      },
+      "duration_ms": 200
+    },
+    {
+      "trace_id": "fx-broken-contract",
+      "span_id": "fx-broken-contract-llm-11",
+      "parent_span_id": "fx-broken-contract-root",
+      "ts": "2026-08-21T07:14:19.705284+00:00",
+      "step_type": "llm_call",
+      "raw_step_type": "assistant_message",
+      "step_name": "assistant_message",
+      "execution_status": "success",
+      "output": {
+        "text": "Step 4 errored: the reconcile output is missing a required `discrepancies` field, so no report was written. Its input file existed, so per instructions I continue to step 5."
+      }
+    }
+  ]
+}

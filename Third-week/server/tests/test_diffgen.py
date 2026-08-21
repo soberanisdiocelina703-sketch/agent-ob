@@ -90,3 +90,21 @@ def test_missing_step_counts_as_divergence(conn):
     g = build_graph(conn, "t-short")
     finding, _ = generate_diff_finding(conn, g, "t-base")
     assert finding is not None and "fetch_payments" in finding.summary
+
+
+def test_llm_text_drift_is_not_divergence(conn):
+    """真实录制教训（retro 2026-08-21）：assistant 文本每次漂移，不得进对照。"""
+    def with_llm(trace_id, text):
+        run_trace(conn, trace_id, GOOD)
+        ingest(conn, {"resource": RES, "spans": [{
+            "trace_id": trace_id, "span_id": f"{trace_id}-llm", "parent_span_id": None,
+            "ts": "2026-08-20T08:00:09Z", "step_type": "llm_call",
+            "step_name": "assistant_message", "execution_status": "success",
+            "output": {"text": text},
+        }]})
+
+    with_llm("t-base", "对账完成，一切正常")
+    with_llm("t-same", "五步全部执行成功，账实相符")  # 文本不同但业务一致
+    g = build_graph(conn, "t-same")
+    finding, reason = generate_diff_finding(conn, g, "t-base")
+    assert finding is None and reason == "no_divergence"

@@ -22,15 +22,33 @@ def cmd_run(args, extra: list[str]) -> int:
     if not extra:
         print("error: `--` 之后必须给出被包装的命令（如 claude -p ...）", file=sys.stderr)
         return 2
+    import shutil
+
+    resolved = shutil.which(extra[0])  # Windows: claude 实为 claude.cmd 垫片
+    if resolved is None:
+        print(f"error: 找不到命令 {extra[0]}（请确认已安装并登录 Claude Code CLI，"
+              f"或改用离线态 demo-offline）", file=sys.stderr)
+        return 2
+    extra = [resolved] + extra[1:]
     parser = StreamParser()
     archive = Path(args.archive) if args.archive else None
     if archive:
         archive.parent.mkdir(parents=True, exist_ok=True)
 
+    # Windows .CMD 垫片会折断含换行的 argv —— 多行 prompt 一律走 stdin
+    stdin_data = None
+    if args.stdin_file:
+        stdin_data = Path(args.stdin_file).read_text(encoding="utf-8")
+
     proc = subprocess.Popen(
         extra, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
         text=True, encoding="utf-8", env={**os.environ},
     )
+    if stdin_data is not None:
+        assert proc.stdin is not None
+        proc.stdin.write(stdin_data)
+        proc.stdin.close()
     raw_lines = []
     assert proc.stdout is not None
     for line in proc.stdout:
@@ -92,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     runp.add_argument("--run-name", default="adhoc")
     runp.add_argument("--server", default=DEFAULT_SERVER)
     runp.add_argument("--archive", help="原始 stream-json 存档路径")
+    runp.add_argument("--stdin-file", help="通过 stdin 喂给被包装命令的文件（多行 prompt）")
     conn = sub.add_parser("connect", help="向 .claude/settings.json 写入旁路上报 hooks")
     conn.add_argument("--project", required=True)
     conn.add_argument("--server", default=DEFAULT_SERVER)
