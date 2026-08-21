@@ -62,6 +62,7 @@ export interface Candidate {
   evidence_grade: string;
   source: "rule" | "diff" | "model";
   first_fault_span_id: string | null;
+  causal_path: string[];
   version: number;
   evidence: Evidence[];
   verdict: { result: string; reason_code: string | null } | null;

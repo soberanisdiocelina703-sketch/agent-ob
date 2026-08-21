@@ -12,7 +12,7 @@ const diagnosis = {
   candidates: [{
     id: "cand-1", rank: 1, cause_type: "quality_check_failed",
     summary: "步骤 fetch_payments 输出与成功基线首次显著分歧",
-    evidence_grade: "diff_based", source: "diff",
+    evidence_grade: "diff_based", source: "diff", causal_path: [],
     first_fault_span_id: "t1-fetch_payments", version: 0, verdict: null,
     evidence: [{ id: "e1", side: "support", kind: "diff_divergence",
                  span_ref: "t1/t1-fetch_payments", event_ref: null,
@@ -23,6 +23,7 @@ const diagnosis = {
 let reviewCalls = 0;
 const server = setupServer(
   http.get("/v1/incidents/:id/diagnosis", () => HttpResponse.json(diagnosis)),
+  http.get("/v1/projects/:pid/incidents", () => HttpResponse.json({ incidents: [] })),
   http.get("/v1/incidents/:id/diff", () =>
     HttpResponse.json({ available: false, reason: "no_baseline", message: "暂无可比成功基线" })),
   http.post("/v1/candidates/:id/review", () => {
@@ -63,11 +64,11 @@ describe("DiagnosisPage", () => {
   it("复核确认_成功后展示回执_再次提交遇409给出冲突提示", async () => {
     renderPage();
     const user = userEvent.setup();
-    const confirmBtn = await screen.findByRole("button", { name: "确认是根因" });
+    const confirmBtn = await screen.findByRole("button", { name: /确认是根因/ });
     await user.click(confirmBtn);
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(/复核已记录/));
-    await user.click(screen.getByRole("button", { name: "确认是根因" }));
+    await user.click(screen.getByRole("button", { name: /确认是根因/ }));
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(/并发冲突/));
   });

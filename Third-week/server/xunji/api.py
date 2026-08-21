@@ -87,14 +87,17 @@ def list_traces(pid: str, execution_status: str | None = None,
                   MAX(agent_id) agent_id, MAX(agent_version) agent_version,
                   MAX(run_name) run_name,
                   MAX(CASE WHEN execution_status IN ('error','timeout') THEN 1 ELSE 0 END) has_error,
-                  MAX(CASE WHEN quality_verdict='failed' THEN 1 ELSE 0 END) has_quality_fail
+                  MAX(CASE WHEN quality_verdict='failed' THEN 1 ELSE 0 END) has_quality_fail,
+                  MAX(CASE WHEN quality_verdict='pass' THEN 1 ELSE 0 END) has_quality_pass
            FROM spans WHERE project_id=? GROUP BY trace_id ORDER BY started_at DESC LIMIT ?""",
         (pid, limit),
     ).fetchall()
     out = []
     for r in rows:
         exec_status = "error" if r["has_error"] else "success"
-        quality = "failed" if r["has_quality_fail"] else "pass"
+        # 质量三态：有失败即 failed；有通过判定才算 pass；否则未评估（校验未跑到）
+        quality = ("failed" if r["has_quality_fail"]
+                   else "pass" if r["has_quality_pass"] else "unevaluated")
         if execution_status and exec_status != execution_status:
             continue
         if quality_verdict and quality != quality_verdict:
