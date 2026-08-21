@@ -2,7 +2,7 @@ import pytest
 
 from xunji import db
 from xunji.causal import build_graph
-from xunji.diagnosis import aggregate, load_candidates, run_model_stage, run_sync_diagnosis
+from xunji.diagnosis import aggregate, load_candidates
 from xunji.evaluator import ClaudeCodeEvaluator, MockEvaluator, validate_model_output
 from xunji.ingestion import ingest
 from xunji.pipeline import process_trace

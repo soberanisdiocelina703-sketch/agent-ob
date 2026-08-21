@@ -82,15 +82,17 @@ def create_regression_case(conn: sqlite3.Connection, incident_id: str,
     return {"case_id": case_id, "suite_id": suite_id, "invariants": invariants}
 
 
-def _latest_trace_for_release(conn: sqlite3.Connection, project_id: str,
-                              release: str) -> str | None:
-    row = conn.execute(
+def _traces_for_release(conn: sqlite3.Connection, project_id: str,
+                        release: str, cap: int = 20) -> list[str]:
+    # docs/08 未定义门禁评估范围（记 retro）：取该 release 全部运行（上限 cap），
+    # 任一运行违反不变量即视为复现——比只看最新一次诚实
+    rows = conn.execute(
         """SELECT trace_id, MAX(ts) latest FROM spans
            WHERE project_id=? AND agent_version=? GROUP BY trace_id
-           ORDER BY latest DESC LIMIT 1""",
-        (project_id, release),
-    ).fetchone()
-    return row["trace_id"] if row else None
+           ORDER BY latest DESC LIMIT ?""",
+        (project_id, release, cap),
+    ).fetchall()
+    return [r["trace_id"] for r in rows]
 
 
 def _check_case(conn: sqlite3.Connection, case: dict, trace_id: str) -> dict:
@@ -129,14 +131,17 @@ def run_gate(conn: sqlite3.Connection, suite_id: str, release: str, mode: str) -
         (suite_id,),
     ).fetchall()
 
-    trace_id = _latest_trace_for_release(conn, suite["project_id"], release)
+    trace_ids = _traces_for_release(conn, suite["project_id"], release)
     results = []
     for case in cases:
-        if trace_id is None:
+        if not trace_ids:
             results.append({"case_id": case["id"], "trace_id": None, "passed": False,
                             "violations": [{"detail": f"release {release} 无可评估运行"}]})
-        else:
-            results.append(_check_case(conn, dict(case), trace_id))
+            continue
+        per_trace = [_check_case(conn, dict(case), tid) for tid in trace_ids]
+        worst = next((r for r in per_trace if not r["passed"]), per_trace[0])
+        worst["evaluated_traces"] = len(per_trace)
+        results.append(worst)
 
     failed = [r for r in results if not r["passed"]]
     if not cases:
@@ -147,7 +152,7 @@ def run_gate(conn: sqlite3.Connection, suite_id: str, release: str, mode: str) -
         result = GateResult.PASS.value
 
     run_id = f"gate-{uuid.uuid4().hex[:8]}"
-    detail = {"cases": results, "release": release, "evaluated_trace": trace_id}
+    detail = {"cases": results, "release": release, "evaluated_traces": trace_ids}
     conn.execute(
         "INSERT INTO gate_runs (id, suite_id, release, mode, result, detail, created_at) "
         "VALUES (?,?,?,?,?,?,?)",
