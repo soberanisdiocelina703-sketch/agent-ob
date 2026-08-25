@@ -1,6 +1,25 @@
 /* 寻迹原型逻辑 —— 全部页面由数据层渲染，数据源见 data.js（唯一事实源 second-week/docs/00） */
 'use strict';
 
+/* ============ 全局错误边界 ============ */
+window.onerror = function(msg, url, line, col, error) {
+  console.error('Runtime error:', error);
+  const main = document.querySelector('.main');
+  if (main) {
+    main.innerHTML = `<div class="empty" style="padding:var(--s8);color:var(--bad)">
+      ${icon('alert','lg')}<b style="display:block;margin-top:var(--s3)">页面遇到错误</b>
+      <div style="margin-top:var(--s2);font-size:12.5px;color:var(--text-2)">${esc(String(msg))}</div>
+      <button class="btn pri" style="margin-top:var(--s4)" onclick="location.reload()">刷新页面</button>
+    </div>`;
+  }
+  return true;
+};
+
+function safeRender(fn, fallback = '<div class="empty">加载失败，请刷新重试</div>') {
+  try { return fn(); }
+  catch (e) { console.error('Render error:', e); return fallback; }
+}
+
 /* ============ 工具 ============ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -15,6 +34,59 @@ const STAGE = { 'T1 已实现':'t-ok', 'T1 部分实现':'t-warn', 'T2 设计中
 const STEP_TAG = { RETRIEVAL:'t-rule', MEMORY:'t-warn', STATE:'t-warn', TOOL:'t-brand', LLM:'t-model', HANDOFF:'t-brand', AGENT:'t-brand', OUTPUT:'t-gray', ENTRY:'t-gray', GUARDRAIL:'t-rule', OTHER:'t-gray' };
 
 function tag(cls, text){ return `<span class="tag ${cls}">${esc(text)}</span>`; }
+
+/* ============ 数据层抽象 ============ */
+const DataSource = {
+  async fetchTraces(filters) {
+    // 原型模式：返回硬编码数据
+    return Promise.resolve(TRACES.filter(t =>
+      (filters.exec === 'all' || t.exec === filters.exec) &&
+      (filters.quality === 'all' || t.quality === filters.quality) &&
+      (filters.run === 'all' || t.run === filters.run) &&
+      (filters.ver === 'all' || t.ver === filters.ver)
+    ));
+    // 生产模式示例：
+    // return fetch('/api/traces', { method:'POST', body:JSON.stringify(filters), headers:{'Content-Type':'application/json'} })
+    //   .then(r => r.ok ? r.json() : Promise.reject(new Error(r.statusText)));
+  },
+  async fetchIncidents(filters) {
+    return Promise.resolve(INCIDENTS.filter(i => {
+      const age = filters.age === 'all' ? Infinity : parseInt(filters.age);
+      const matchFm = filters.fm === 'all' || i.fm === filters.fm;
+      const matchStep = filters.step === 'all' || i.faultType === filters.step;
+      const matchReview = filters.review === 'all' || i.review === filters.review;
+      const matchEvidence = filters.evidence === 'all' || i.evidence === filters.evidence;
+      const matchQ = !filters.q || i.id.includes(filters.q) || i.run.includes(filters.q) || i.symptom.includes(filters.q);
+      const matchAge = i.age <= age;
+      return matchFm && matchStep && matchReview && matchEvidence && matchQ && matchAge;
+    }));
+  },
+  async fetchDiagnosis(incidentId) {
+    return Promise.resolve(DIAGNOSES[incidentId] || null);
+  },
+  // 预留其他端点
+  async submitReview(incidentId, verdict, reason) {
+    console.log('Submit review:', incidentId, verdict, reason);
+    return Promise.resolve({ ok: true });
+  }
+};
+
+/* ============ 辅助函数 ============ */
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function announce(msg) {
+  const region = document.getElementById('liveRegion');
+  if (region) {
+    region.textContent = msg;
+    setTimeout(() => { region.textContent = ''; }, 1000);
+  }
+}
 
 /* 只读展示字段：用文本块而非 <input readonly> —— 单行输入框无法换行，
    长值（事故 ID、快照、不变量）会被静默截断。这些值仅用于展示，不参与提交。 */
@@ -65,7 +137,7 @@ function go(page, fromHistory){
   state.page = page;
   document.querySelectorAll('.page').forEach(el => el.classList.remove('show'));
   const host = $('pg-' + page);
-  host.innerHTML = PAGES[page].render();
+  host.innerHTML = safeRender(() => PAGES[page].render());
   host.classList.add('show');
   const navKey = PAGES[page].nav || page;
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.page === navKey));
@@ -73,6 +145,7 @@ function go(page, fromHistory){
   if (!fromHistory && location.hash !== '#' + page) history.pushState({ page }, '', location.pathname + '#' + page);
   window.scrollTo(0, 0);
   enhanceKeyboard();
+  announce(PAGES[page].title + '已加载');
   if (PAGES[page].after) PAGES[page].after();
 }
 
@@ -134,9 +207,13 @@ function onRunFilter(){
   const f = state.filters.run;
   f.exec = $('rfExec').value; f.quality = $('rfQuality').value;
   f.run = $('rfRun').value; f.ver = $('rfVer').value;
-  go('runs');
+  debouncedRerender();
 }
 function resetRunFilter(){ state.filters.run = { exec:'all', quality:'all', run:'all', ver:'all' }; go('runs'); toast('已清除运行记录筛选'); }
+
+const debouncedRerender = debounce(() => {
+  go(state.page, true);
+}, 300);
 function openTrace(id){ state.traceId = id; go('trace'); }
 
 /* ============ Trace 详情 ============ */
@@ -178,9 +255,9 @@ function renderTree(spans, highlight, inc){
   return `<div class="card">
     <div class="hd"><b>完整 Trace</b><span class="small muted">共 ${spans.length} 步</span>
       ${inc ? `<span class="sp">${tag('t-bad','首故障 ' + inc.faultStep)}${tag('t-warn','症状 ' + inc.symptomStep.split(' ')[0])}</span>` : ''}</div>
-    <div class="bd tree">${spans.map(s => {
+    <div class="bd tree" role="tree" aria-label="调用链路">${spans.map((s, idx) => {
       const cls = s.st === 'fault' ? 'fault' : s.st === 'symptom' ? 'symptom' : s.st === 'bad' ? 'bad' : s.st === 'warn' ? 'warn' : '';
-      return `<div class="trow ${cls} ${highlight === s.id ? 'hl' : ''}" id="span-${s.id}">
+      return `<div class="trow ${cls} ${highlight === s.id ? 'hl' : ''}" id="span-${s.id}" role="treeitem" aria-level="${s.ind + 1}" aria-setsize="${spans.length}" aria-posinset="${idx + 1}">
         <span class="ind" aria-hidden="true">${'│&nbsp;&nbsp;'.repeat(Math.max(0, s.ind - 1))}${s.ind ? '├─' : ''}</span>
         <span class="mono muted sid">${esc(s.id)}</span>
         ${tag(STEP_TAG[s.type] || 't-gray', s.type)}
@@ -284,9 +361,13 @@ function onIncFilter(){
   f.fm = $('ifFm').value; f.step = $('ifStep').value; f.q = $('ifQ').value;
   f.age = Number($('ifAge').value); f.review = $('ifReview').value; f.evidence = $('ifEvidence').value;
   const pos = $('ifQ') === document.activeElement, caret = pos ? $('ifQ').selectionStart : null;
-  go('incidents', true);
-  if (pos){ const el = $('ifQ'); el.focus(); el.setSelectionRange(caret, caret); }
+  debouncedIncRerender(pos, caret);
 }
+
+const debouncedIncRerender = debounce((keepFocus, caret) => {
+  go('incidents', true);
+  if (keepFocus){ const el = $('ifQ'); if(el){el.focus(); el.setSelectionRange(caret, caret);} }
+}, 300);
 function resetIncFilter(){
   state.filters.inc = { fm:'all', step:'all', q:'', age:168, review:'all', evidence:'all' };
   go('incidents', true); toast('已清除全部筛选条件');
@@ -832,7 +913,10 @@ function toggleSwitch(el, name){
 }
 
 /* ============ 弹窗 ============ */
+let lastFocusBeforeModal = null;
+
 function openModal(title, body, footer){
+  lastFocusBeforeModal = document.activeElement;
   $('modalRoot').innerHTML = `
     <div class="mask show" onclick="if(event.target===this)closeModal()">
       <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
@@ -842,8 +926,37 @@ function openModal(title, body, footer){
       </div>
     </div>`;
   enhanceKeyboard();
+
+  // 焦点捕获与陷阱
+  const modal = document.querySelector('.modal');
+  if (modal) {
+    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length) focusable[0].focus();
+    modal.addEventListener('keydown', trapFocus);
+  }
 }
-function closeModal(){ $('modalRoot').innerHTML = ''; }
+
+function closeModal(){
+  $('modalRoot').innerHTML = '';
+  if (lastFocusBeforeModal) {
+    lastFocusBeforeModal.focus();
+    lastFocusBeforeModal = null;
+  }
+}
+
+function trapFocus(e) {
+  if (e.key !== 'Tab') return;
+  const focusable = Array.from(this.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+  if (!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 /* ============ 键盘可达 ============ */
 function enhanceKeyboard(){

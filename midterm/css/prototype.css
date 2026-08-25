@@ -74,7 +74,7 @@
 
   --sidebar-w:236px;
   --font:"Inter","Segoe UI","Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;
-  --font-mono:"JetBrains Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --font-mono:"JetBrains Mono","SF Mono","Consolas","Liberation Mono",monospace;
 
   /* 别名：渲染层内联样式沿用的旧变量名，映射到当前语义色，避免失效为默认色 */
   --ink2:var(--text-2);
