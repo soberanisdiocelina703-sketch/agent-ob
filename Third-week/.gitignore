@@ -10,6 +10,9 @@ web/dist/
 web/coverage/
 data/
 *.db
-.claude/worktrees/
+.claude/
 .ruff_cache/
 agent/workdir/
+
+# Cygwin/MSYS crash dumps
+*.stackdump

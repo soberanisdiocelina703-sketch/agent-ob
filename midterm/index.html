@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>寻迹 · Agent 链路诊断平台 — 中期答辩</title>
+<script src="vendor/chart.umd.js"></script>
+<style>
+:root{
+  --navy:#0F172A;--navy2:#152238;--navy3:#1E293B;
+  --bg:#F8FAFC;--panel:#FFF;
+  /* 语义文本色与 prototype.css 对齐：均为浅底 ≥4.5:1 的实测值 */
+  --ink:#0F172A;--ink2:#334155;--muted:#5F6A80;--muted2:#64748B;
+  --line:#E2E8F0;--line2:#CBD5E1;
+  --brand:#0369A1;--brand-strong:#075985;--brand-bg:#E0F2FE;--sky:#38BDF8;--sky2:#7DD3FC;
+  --ok:#047857;--ok-bg:#F0FDF4;--ok2:#22C55E;
+  --warn:#92610A;--warn-bg:#FFFBEB;--warn2:#F59E0B;
+  --bad:#BE123C;--bad-bg:#FEF2F2;--bad2:#EF4444;
+  --rule:#0F766E;--rule-bg:#F0FDFA;--model:#6D28D9;--model-bg:#F5F3FF;
+  --shadow-sm:0 1px 3px rgba(15,23,42,.08);--shadow:0 4px 12px rgba(15,23,42,.12);--shadow-lg:0 10px 32px rgba(15,23,42,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:var(--navy);color:var(--ink);font-size:15px;line-height:1.6;overflow:hidden}
+.mono{font-family:Consolas,"Courier New",monospace;font-size:13px}
+.small{font-size:12.5px}.muted{color:var(--muted)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.deck{position:fixed;inset:0;display:flex;flex-direction:column}
+.stage{flex:1;position:relative;min-height:0}
+.slide{position:absolute;inset:0;overflow:auto;padding:42px 60px 76px;background:var(--bg);opacity:0;visibility:hidden;transform:translateX(20px);transition:opacity .26s,transform .26s,visibility .26s}
+.slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
+.slide.dark{background:linear-gradient(140deg,var(--navy) 0%,var(--navy2) 55%,#0B3B5C 100%);color:#E2E8F0}
+.slide.dark::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:44px 44px}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:2px;color:var(--brand);background:var(--brand-bg);border:1px solid #BAE6FD;border-radius:20px;padding:5px 14px;margin-bottom:16px}
+.dark .kicker{color:var(--sky2);background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.3)}
+.kicker.ok{color:var(--ok);background:var(--ok-bg);border-color:#BBF7D0}
+.kicker.warn{color:var(--warn);background:var(--warn-bg);border-color:#FDE68A}
+.kicker.rule{color:var(--rule);background:var(--rule-bg);border-color:#99F6E4}
+.kicker.model{color:var(--model);background:var(--model-bg);border-color:#DDD6FE}
+h1{font-size:42px;line-height:1.2;letter-spacing:-1.2px;font-weight:800}
+h2{font-size:28px;line-height:1.25;letter-spacing:-.5px;font-weight:800;margin-bottom:6px}
+h3{font-size:18px;font-weight:700;margin-bottom:6px}
+h4{font-size:14.5px;font-weight:700;margin-bottom:4px}
+.sub{font-size:15px;color:var(--muted);margin-bottom:20px}
+.dark .sub{color:#94A3B8}
+.bar{flex:none;display:flex;align-items:center;gap:10px;background:var(--navy);color:#CBD5E1;padding:9px 18px;border-top:1px solid rgba(255,255,255,.08);z-index:10}
+.bar .title{font-size:12px;color:#94A3B8;display:flex;align-items:center;gap:8px}
+.bar .title b{color:#fff}
+.bar .spacer{flex:1}
+.bar .pageno{font-size:12px;font-variant-numeric:tabular-nums;color:#94A3B8;min-width:60px;text-align:center}
+.progress{position:absolute;top:0;left:0;height:3px;background:var(--sky);z-index:20;transition:width .26s}
+.dots{display:flex;gap:5px;align-items:center}
+.dots button{width:8px;height:8px;border-radius:50%;border:none;background:rgba(255,255,255,.22);padding:0;transition:transform .15s,background .15s}
+.dots button:hover{background:rgba(255,255,255,.55)}
+.dots button.on{background:var(--sky);transform:scale(1.4)}
+.bbtn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#E2E8F0;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;min-height:32px;transition:background .15s}
+.bbtn:hover{background:rgba(255,255,255,.15)}
+.bbtn.cta{background:var(--brand);border-color:var(--brand)}
+.bbtn.cta:hover{background:var(--brand-strong)}
+.toc{position:fixed;top:0;left:0;bottom:44px;width:310px;background:var(--navy2);color:#E2E8F0;z-index:40;transform:translateX(-100%);transition:transform .22s;box-shadow:var(--shadow-lg);display:flex;flex-direction:column}
+.toc.open{transform:none}
+.toc .th{padding:16px 18px 10px;font-weight:800;font-size:14.5px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center}
+.toc .tx{width:28px;height:28px;border:none;background:transparent;color:#94A3B8;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.toc .tx:hover{background:rgba(255,255,255,.1);color:#fff}
+.toc ol{list-style:none;overflow:auto;padding:8px;flex:1}
+.toc li button{display:flex;gap:9px;width:100%;text-align:left;background:transparent;border:none;color:#CBD5E1;padding:8px 10px;border-radius:7px;font-size:12.5px;cursor:pointer}
+.toc li button:hover{background:rgba(255,255,255,.07);color:#fff}
+.toc li button.on{background:rgba(3,105,161,.32);color:#fff;font-weight:700}
+.toc li button .num{color:#64748B;font-variant-numeric:tabular-nums;min-width:20px}
+.toc li button.on .num{color:var(--sky)}
+.toc-section{padding:8px 10px 3px;font-size:10.5px;font-weight:700;letter-spacing:1.5px;color:#475569;text-transform:uppercase}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.cols4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+.cols-60-40{display:grid;grid-template-columns:3fr 2fr;gap:20px}
+.cols-40-60{display:grid;grid-template-columns:2fr 3fr;gap:20px}
+.cols-65-35{display:grid;grid-template-columns:65fr 35fr;gap:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow-sm)}
+.card.brand{border-color:#BAE6FD;background:linear-gradient(135deg,#F0F9FF,#E0F2FE)}
+.card.ok{border-color:#BBF7D0;background:#F0FDF4}
+.card.warn{border-color:#FDE68A;background:#FFFBEB}
+.card.bad{border-color:#FECACA;background:#FEF2F2}
+.card.rule{border-color:#99F6E4;background:#F0FDFA}
+.card.model{border-color:#DDD6FE;background:#F5F3FF}
+/* 深色面板：自带实底，可放在浅色页上（原半透明白底在浅色页会与文字同色） */
+.card.dark-card{background:linear-gradient(140deg,var(--navy) 0%,var(--navy2) 60%,#0B3B5C 100%);border-color:var(--navy3);color:#E2E8F0}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;white-space:nowrap}
+.tag.rule{background:var(--rule-bg);color:var(--rule);border:1px solid #99F6E4}
+.tag.model{background:var(--model-bg);color:var(--model);border:1px solid #DDD6FE}
+.tag.ok{background:var(--ok-bg);color:var(--ok);border:1px solid #BBF7D0}
+.tag.warn{background:var(--warn-bg);color:var(--warn);border:1px solid #FDE68A}
+.tag.bad{background:var(--bad-bg);color:var(--bad);border:1px solid #FECACA}
+.tag.brand{background:var(--brand-bg);color:var(--brand);border:1px solid #BAE6FD}
+.tag.t1{background:#F0FDF4;color:var(--ok);border:1px solid #BBF7D0}
+.tag.t2{background:#F5F3FF;color:var(--model);border:1px solid #DDD6FE}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:var(--navy3);color:#E2E8F0;padding:9px 12px;text-align:left;font-size:11.5px;font-weight:700;letter-spacing:.4px}
+.tbl td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#F8FAFC}
+.tbl.compact th,.tbl.compact td{padding:6px 10px;font-size:12.5px}
+.stat-tile{text-align:center;padding:16px 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.stat-tile .num{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1}
+.stat-tile .label{font-size:11.5px;color:var(--muted);margin-top:4px}
+.dark .stat-tile{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.12)}
+.dark .stat-tile .label{color:#C3CEDD}
+.divider{border:none;border-top:1px solid var(--line);margin:16px 0}
+.dark .divider{border-color:rgba(255,255,255,.1)}
+.hl{background:rgba(3,105,161,.1);color:var(--brand);padding:1px 5px;border-radius:4px;font-weight:600}
+.hl-warn{background:#FFFBEB;color:var(--warn);padding:1px 5px;border-radius:4px;font-weight:600}
+.hl-ok{background:#F0FDF4;color:var(--ok);padding:1px 5px;border-radius:4px;font-weight:600}
+.hl-bad{background:#FEF2F2;color:var(--bad);padding:1px 5px;border-radius:4px;font-weight:600}
+.check-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13.5px}
+.check-icon{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px}
+.check-icon.done{background:var(--ok-bg);color:var(--ok);border:1.5px solid var(--ok2)}
+.check-icon.pending{background:var(--warn-bg);color:var(--warn);border:1.5px solid var(--warn2)}
+.check-icon.risk{background:var(--bad-bg);color:var(--bad);border:1.5px solid var(--bad2)}
+.flow-row{display:flex;align-items:center;flex-wrap:nowrap;gap:0;overflow-x:auto;padding:10px 0}
+.flow-node{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none}
+.flow-circle{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid}
+.flow-circle.normal{background:var(--ok-bg);border-color:var(--ok2);color:var(--ok)}
+.flow-circle.fault{background:#FFF7ED;border-color:#FB923C;color:#B4400A}
+.flow-circle.symptom{background:var(--bad-bg);border-color:var(--bad2);color:var(--bad)}
+.flow-circle.info{background:var(--brand-bg);border-color:var(--sky2);color:var(--brand)}
+.flow-label{font-size:10.5px;color:var(--muted);max-width:60px;text-align:center;line-height:1.3}
+.flow-arrow{color:var(--muted);font-size:18px;padding:0 6px;flex:none;margin-bottom:14px}
+.ev-row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:13px}
+.ev-row.support{background:var(--rule-bg);border-left:3px solid var(--rule)}
+.ev-row.counter{background:var(--warn-bg);border-left:3px solid var(--warn2)}
+.ev-num{flex:none;font-size:11px;font-weight:700;color:var(--muted);min-width:24px;padding-top:1px}
+.risk-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:8px;font-size:13px}
+.risk-badge{flex:none;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;margin-top:1px}
+.risk-badge.high{background:#FEF2F2;color:var(--bad)}
+.risk-badge.med{background:#FFFBEB;color:var(--warn)}
+.risk-badge.low{background:#F0FDF4;color:var(--ok)}
+/* 矮屏纵向压缩：答辩时投影常见 1366x768 / 1280x720，逐级收紧留白与字号，
+   使每页仍能一屏放完（不改 1440+ 的设计尺寸）。 */
+@media(max-height:860px){
+  .slide{padding:30px 48px 66px}
+  h1{font-size:44px}
+  h2{font-size:24px}
+  .sub{font-size:14px;margin-bottom:13px}
+  .kicker{margin-bottom:11px;padding:4px 12px}
+  .card{padding:14px 16px}
+  .tbl th,.tbl td{padding:6px 10px}
+  .tbl.compact th,.tbl.compact td{padding:4px 8px}
+  .cols2,.cols3{gap:13px}
+  .stat-tile{padding:12px 10px}
+}
+@media(max-height:770px){
+  .slide{padding:24px 40px 62px}
+  h1{font-size:38px}
+  h2{font-size:21px;margin-bottom:4px}
+  .sub{font-size:13px;margin-bottom:10px}
+  .card{padding:11px 13px}
+  .tbl{font-size:12px}
+  .tbl th,.tbl td{padding:5px 8px}
+  .tbl.compact th,.tbl.compact td{padding:3px 7px}
+  .cols2,.cols3{gap:11px}
+  .risk-row{padding:7px 10px;margin-bottom:5px;font-size:12.5px}
+  .check-item{margin-bottom:5px}
+  .stat-tile{padding:9px 8px}
+  .stat-tile .num{font-size:24px}
+  .ev-row{padding:7px 9px;margin-bottom:5px;font-size:12.5px}
+  .tight-h .card{padding:10px 12px}
+}
+@media(max-height:730px){
+  .slide{padding:20px 34px 58px}
+  h2{font-size:19px}
+  .sub{font-size:12.5px;margin-bottom:8px}
+  .kicker{margin-bottom:8px;font-size:11px}
+  .card{padding:9px 11px}
+  .cols2,.cols3{gap:9px}
+  .risk-row{padding:6px 9px;margin-bottom:4px;font-size:12px}
+  .tbl,.tbl.compact th,.tbl.compact td{font-size:11.5px}
+  .tbl th,.tbl td{padding:4px 7px}
+  .tbl.compact th,.tbl.compact td{padding:3px 6px}
+  .bar{padding:6px 14px}
+  /* p9 底部三张补充卡在 720p 挤不下：收紧正文行高与内边距 */
+  .tight-h .card{padding:8px 10px}
+  .tight-h p,.tight-h div{font-size:12px!important;line-height:1.55}
+  .tight-h h4{font-size:13px}
+  /* 证据行（p9 主体）与卡片内密集列表 */
+  .ev-row{padding:6px 8px;margin-bottom:4px;font-size:12px}
+  .cols3>div>div[style*="flex-direction:column"]{gap:5px!important}
+}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+<div class="progress" id="prog"></div>
+
+<div class="toc" id="toc" role="dialog" aria-modal="true" aria-label="目录">
+<div class="th"><span>目录</span>
+<button class="tx" onclick="toggleToc()" aria-label="关闭目录">✕</button></div>
+<ol id="toc-list"></ol>
+</div>
+
+<div class="stage" id="stage">
+
+<!-- SLIDE 01 封面 -->
+<section class="slide dark active" id="s1" data-title="封面">
+<div style="display:flex;flex-direction:column;justify-content:center;height:100%;gap:0">
+  <div class="kicker">Agent 链路追踪 · 三周中期答辩</div>
+  <h1 style="font-size:52px;margin-bottom:16px">寻迹<span style="color:var(--sky)">·</span><br>Agent 链路诊断平台</h1>
+  <p class="sub" style="font-size:18px;max-width:560px">从症状到根因的全链路证据化诊断——让"AI 改了什么、为什么错"有迹可循</p>
+  <div style="display:flex;gap:20px;margin-top:28px;flex-wrap:wrap">
+    <div class="stat-tile" style="min-width:120px"><div class="num" style="color:var(--sky)">3</div><div class="label">周研发</div></div>
+    <div class="stat-tile" style="min-width:120px"><div class="num" style="color:var(--sky)">15</div><div class="label">任务交付</div></div>
+    <div class="stat-tile" style="min-width:120px"><div class="num" style="color:var(--sky)">9</div><div class="label">页面原型</div></div>
+    <div class="stat-tile" style="min-width:120px"><div class="num" style="color:var(--sky)">9</div><div class="label">故障类型覆盖</div></div>
+  </div>
+  <p style="margin-top:32px;font-size:13px;color:#B6C2D4">2026-08-24 · 寻迹产品团队</p>
+</div>
+</section>
+
+<!-- SLIDE 02 议程 -->
+<section class="slide" id="s2" data-title="议程总览">
+<div class="kicker">AGENDA</div>
+<h2>答辩结构</h2>
+<p class="sub">三周工作，15 个任务，完整闭环</p>
+<div class="cols2" style="gap:16px">
+  <div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">WEEK 1 · 竞品研究</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--brand-bg);color:var(--brand);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">1</div>
+        <div><b>竞品全景</b> — AgentLoop、AgentArts、Langfuse 三维对比</div>
+      </div>
+      <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--brand-bg);color:var(--brand);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">2</div>
+        <div><b>场景评分与差异化</b> — 5 候选场景加权评分，定位 Causal-first Debugger</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">WEEK 2 · 产品设计</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:#E0F2FE;color:var(--brand);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">3</div>
+        <div><b>问题定义+五层机制</b> — FM-07 主线案例、9 类故障、数据到资产五层</div>
+      </div>
+      <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:#E0F2FE;color:var(--brand);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">4</div>
+        <div><b>PRD+流程+原型</b> — 8 模块、8 步闭环、双向证据复核、9 页原型</div>
+      </div>
+      <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center">
+        <div style="width:28px;height:28px;border-radius:50%;background:#E0F2FE;color:var(--brand);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">5</div>
+        <div><b>异常+测试+验证</b> — 14 项异常处理、测试分层、3 人走查</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div style="margin-top:14px" class="card brand">
+  <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--brand);margin-bottom:8px">WEEK 3 · 工程进展</div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13.5px">
+    <span>✦ 接口契约落地（11 个）</span>
+    <span>✦ 技术复盘（9 条反哺）</span>
+    <span>✦ 原型演示路径</span>
+    <span>✦ 质量风险与下一步</span>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 03 竞品全景 -->
+<section class="slide" id="s3" data-title="竞品全景对比">
+<div class="kicker">WEEK 1 · 任务 1</div>
+<h2>三款竞品全景对比</h2>
+<p class="sub">AgentLoop · AgentArts · Langfuse — 检索截止 2026-08-12</p>
+<table class="tbl compact">
+<thead><tr>
+  <th style="width:140px">维度</th>
+  <th>AgentLoop <span class="tag brand">阿里云</span></th>
+  <th>AgentArts <span class="tag brand">华为云</span></th>
+  <th>Langfuse <span class="tag ok">开源</span></th>
+</tr></thead>
+<tbody>
+<tr><td><b>核心定位</b></td><td>观测+审计+评估+实验+自进化</td><td>开发+运行+观测+评估全栈</td><td>AI 工程质量改进平台</td></tr>
+<tr><td><b>Trace 视图</b></td><td>5 种（树/图/时序/轨迹/分析）</td><td>Root/All Span+调用链+会话</td><td>Tree+Log+Graph</td></tr>
+<tr><td><b>诊断答案</b></td><td class="hl-warn">技术数据完整，缺统一因果诊断</td><td class="hl-warn">节点可见，根因定位靠人工</td><td class="hl-warn">全文检索强，语义根因薄</td></tr>
+<tr><td><b>证据引用</b></td><td>STAROps/Judge 输出文本，无强制引用</td><td>日志+节点状态，无跨步骤 Diff</td><td>Observation 查询，无反证机制</td></tr>
+<tr><td><b>失败闭环</b></td><td>Trace→Dataset→实验，字段映射靠人工</td><td>评测集→对比，跨模块跳转多</td><td>Dataset+Experiment，CI 门禁完善</td></tr>
+<tr><td><b>开放性</b></td><td>OTel 接入，深度绑定阿里云</td><td>OTel 接入，深度绑定华为云</td><td class="hl-ok">MIT 开源，自托管成熟</td></tr>
+</tbody>
+</table>
+<div style="margin-top:16px" class="cols3">
+  <div class="card rule" style="padding:12px"><b>AgentLoop 领先：</b>Trace 到评估、数据集、实验、经验库和安全审计的闭环最完整</div>
+  <div class="card model" style="padding:12px"><b>AgentArts 领先：</b>开发、运行时、MCP 网关、记忆、沙箱一体化最强</div>
+  <div class="card ok" style="padding:12px"><b>Langfuse 领先：</b>开放性、自托管、跨框架接入和数据平台透明度最强</div>
+</div>
+<div class="card warn" style="margin-top:12px;padding:10px 16px">
+  <b>共同空白：</b>三家均具备数据底座，但跨步骤「首故障点+证据化诊断+反证」的统一答案，<b>在公开能力中尚未形成压倒性方案</b>——这是寻迹的切入点。
+</div>
+<div style="margin-top:12px" class="card" style="padding:12px 16px">
+  <h4>AgentLoop 核心流程阻力点（任务 2 发现）</h4>
+  <div style="font-size:13px;margin-top:6px;display:flex;flex-direction:column;gap:5px">
+    <div>• <b>步骤③ 验证采集：</b>缺完整度评分，字段覆盖/断链/敏感数据问题要等排障时才发现</div>
+    <div>• <b>步骤④ 发现异常：</b>仍依赖人知道「查什么」；失败模式无自动聚类与优先级排序</div>
+    <div>• <b>步骤⑤ 定位问题：</b>5 种视图信息完整，但缺「首故障点+因果证据」统一诊断答案</div>
+    <div>• <b>步骤⑦→⑧ 沉淀验证：</b>从诊断到修复配置多次跳转；字段映射靠人工，闭环成本高</div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 04 场景评分 -->
+<section class="slide" id="s4" data-title="场景评分与选定">
+<div class="kicker">WEEK 1 · 任务 3–4</div>
+<h2>高价值场景评分 → 选定</h2>
+<p class="sub">评分公式：痛点×25% + 频率×15% + 覆盖×15% + 付费×15% + 空白×15% + 可行性×15%</p>
+<table class="tbl">
+<thead><tr><th style="width:28px">排名</th><th>候选场景</th><th style="width:50px">痛点</th><th style="width:50px">空白</th><th style="width:70px">总分</th></tr></thead>
+<tbody>
+<tr style="background:#EFF6FF">
+  <td style="text-align:center;font-weight:700">①</td>
+  <td><b>跨 Agent 因果故障定位与证据化回放</b> <span class="tag brand">选定</span></td>
+  <td style="text-align:center">5</td><td style="text-align:center">5</td>
+  <td style="text-align:center;font-weight:800;color:var(--brand)">4.55</td>
+</tr>
+<tr><td style="text-align:center">②</td><td>生产质量回归预警与发布门禁</td><td style="text-align:center">5</td><td style="text-align:center">3</td><td style="text-align:center">4.40</td></tr>
+<tr><td style="text-align:center">③</td><td>Token / 延迟异常归因与成本优化</td><td style="text-align:center">4</td><td style="text-align:center">2</td><td style="text-align:center">4.15</td></tr>
+</tbody>
+</table>
+<div class="cols2" style="gap:14px;margin-top:14px">
+  <div class="card brand">
+    <h4>为什么选场景①（4.55 分）</h4>
+    <div style="font-size:13px;margin-top:6px;display:flex;flex-direction:column;gap:5px">
+      <div><b style="color:var(--bad)">痛点 5/5：</b>症状步骤≠根因步骤，甚至全链无报错——跨步骤比对仍靠人翻着看</div>
+      <div><b style="color:var(--warn)">空白 5/5：</b>AgentLoop 有完整数据底座，但公开文档无成熟因果诊断工作台，「首故障点+证据+反证」的统一排障流程无公开方案</div>
+      <div><b style="color:var(--ok)">可行性 4/5：</b>可借助 OTel 语义+现有 LLM 评估能力；可靠诊断需要领域数据，不适合裸跑通用 LLM</div>
+    </div>
+  </div>
+  <div class="card">
+    <h4>场景定义与目标指标（待验证）</h4>
+    <p style="font-size:13px;margin-top:6px;line-height:1.7">为<b>运行单 Agent 生产系统的平台团队与 SRE</b>，在<b>生产事故排查</b>情境下解决<b>症状步骤≠根因步骤（甚至全链无报错）、证据散落难定位</b>的问题</p>
+    <div style="font-size:13px;margin-top:8px;display:flex;flex-direction:column;gap:4px">
+      <div class="check-item"><div class="check-icon pending">○</div><div>首故障点 <b>Top-3 命中率 ≥ 70%</b></div></div>
+      <div class="check-item"><div class="check-icon pending">○</div><div><b>证据接受率 ≥ 60%</b>（用户确认是根因的比例）</div></div>
+      <div class="check-item"><div class="check-icon pending">○</div><div>从打开事故到生成回归用例 <b>≤ 3 次主操作、≤ 10 分钟</b></div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 05 差异化方向 -->
+<section class="slide" id="s5" data-title="差异化方向定位">
+<div class="kicker">WEEK 1 · 任务 10</div>
+<h2>差异化方向：Causal-first Debugger</h2>
+<p class="sub">基于 AgentLoop 缺陷分析，5 个可感知差异落到具体设计</p>
+<table class="tbl compact">
+<thead><tr>
+  <th style="width:28px">#</th>
+  <th>AgentLoop 现状与不足</th>
+  <th>寻迹 具体设计</th>
+  <th>用户第一眼的不同</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td style="text-align:center;font-weight:700">1</td>
+  <td>5 种 Trace 视图信息完整，缺统一诊断答案；认知切换多</td>
+  <td><b>诊断工作台</b>为核心页面：症状、Top-3 候选、因果路径、证据入口集中一屏；Trace 树降级为底部按需下钻</td>
+  <td>打开事故<b>先看结论候选</b>，不是一棵几百节点的树</td>
+</tr>
+<tr>
+  <td style="text-align:center;font-weight:700">2</td>
+  <td>STAROps / Judge 输出文本，无强制证据引用</td>
+  <td><b>证据卡片：</b>每条候选根因挂支持证据与反证，每条证据引用 Span ID / 状态 Diff / 工具参数；无引用的结论不允许渲染</td>
+  <td>AI 说的每句话都能<b>点进去验证</b>，还主动给出「反对自己」的证据</td>
+</tr>
+<tr>
+  <td style="text-align:center;font-weight:700">3</td>
+  <td>只能查看单条链路，判断「和正常的差在哪」靠人脑记忆</td>
+  <td><b>成功/失败 Diff：</b>自动检索同类成功链，按状态、传参、工具三个维度并排对比，差异行高亮</td>
+  <td>像看<b>代码 Diff</b> 一样看两次执行的差异</td>
+</tr>
+<tr>
+  <td style="text-align:center;font-weight:700">4</td>
+  <td>QuickStart 依赖链长、失败不回滚、无采集完整度反馈</td>
+  <td><b>接入体检：</b>接入后自动出报告——字段覆盖率、断链数、重复 Span、敏感字段暴露，每项附一键修复指引</td>
+  <td>接完就知道「<b>数据可不可信</b>」，不等排障时才发现漏采</td>
+</tr>
+<tr>
+  <td style="text-align:center;font-weight:700">5</td>
+  <td>Trace→评估→数据集→实验闭环完整，字段映射靠人工</td>
+  <td><b>三步闭环：</b>打开事故（1）→ 复核（2）→ 转回归用例（3）；用例自动携带输入、上下文快照与期望不变量</td>
+  <td>从「看到问题」到「防住问题」<b>三次点击</b></td>
+</tr>
+</tbody>
+</table>
+<div class="card warn" style="margin-top:12px;padding:10px 16px;font-size:13px">
+  <b>不做"为了不同而不同"：</b>产品仍使用工程后台常见的左侧导航、筛选表格、详情页、双栏对比和底部操作区。差异只放在信息顺序和证据约束上。排除：角色人格化名字、剧情式复核流程、大面积装饰动画、未校准的精确置信度百分比。
+</div>
+</section>
+
+<!-- SLIDE 06 问题定义与九类故障 -->
+<section class="slide" id="s6" data-title="问题定义与九类故障">
+<div class="kicker">WEEK 2 · 任务 3</div>
+<h2>问题定义：为什么、解决什么</h2>
+<p class="sub">主线案例 FM-07 检索排序漂移 — 评审指出有低成本解法的案例撑不起「必须靠因果图」的价值主张</p>
+<div class="cols-60-40">
+  <div>
+    <div class="card bad" style="margin-bottom:12px;padding:14px 18px">
+      <h4 style="color:var(--bad)">主线案例：INC-2026-0821-017（FM-07）</h4>
+      <div style="font-size:13px;margin-top:8px;display:flex;flex-direction:column;gap:5px">
+        <div>• <b>Agent：</b>订单助手 v1.4.0 / 退款政策答复</div>
+        <div>• <b>现象：</b>9 步全部 success，HTTP 全 200，规则引擎判定「无异常」</div>
+        <div>• <b>实际：</b>按已废止政策 v3 答复「支持 7 天无理由退款」</div>
+        <div>• <b>影响：</b>37 个会话 / 24h，14 例投诉</div>
+        <div>• <b>根因：</b>2026-08-20 22:10 索引重建，embedding v2→v3 覆盖 12,847 文档，v3 相似度 0.71→0.83，v5 0.86→0.79，排序翻转，v5 被 top_k=3 截断</div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <h4>九类故障分类与能力阶段</h4>
+      <table class="tbl compact" style="margin-top:8px">
+        <thead><tr><th>类别</th><th>有无低成本解法</th><th>能力阶段</th></tr></thead>
+        <tbody>
+          <tr><td>FM-01 缓存过期/FM-02 字段丢失/FM-03 格式不符/FM-04 超时重试/FM-05 状态冲突/FM-06 工具误用</td><td><span class="tag warn">有（TTL/Schema/重试熔断）</span></td><td><span class="tag t1">T1 部分实现</span></td></tr>
+          <tr style="background:#EFF6FF"><td><b>FM-07 检索排序漂移/FM-08 多轮上下文冲突/FM-09 非幂等重试</b></td><td><span class="tag bad">无——执行层全成功，根因是复合条件</span></td><td><span class="tag t2">T2 设计中</span></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">能力阶段标注：FM-02/03/04 判定路径 T1 已实现，FM-05 T1 部分实现，FM-01/06/07/08/09 属 T2 设计中。产品对全部九类提供诊断，价值密度不同。</p>
+    </div>
+  </div>
+  <div>
+    <div class="card brand" style="margin-bottom:12px;padding:14px 18px">
+      <h4>代价可量化</h4>
+      <div class="cols2" style="margin-top:10px;gap:10px">
+        <div class="stat-tile"><div class="num" style="color:var(--bad)">½–2天</div><div class="label">跨步骤事故排障工时</div></div>
+        <div class="stat-tile"><div class="num" style="color:var(--warn)">MTTR↑</div><div class="label">平均修复时长增加</div></div>
+        <div class="stat-tile"><div class="num" style="color:var(--bad)">FM-09</div><div class="label">无症状步骤，靠财务对账暴露</div></div>
+        <div class="stat-tile"><div class="num" style="color:var(--warn)">复发</div><div class="label">经验留聊天记录，换人重踩坑</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 18px">
+      <h4>FM-07/08/09 共同结构特征</h4>
+      <div style="font-size:13px;margin-top:6px;display:flex;flex-direction:column;gap:5px">
+        <div class="check-item"><div class="check-icon risk">!</div><div>执行层全部成功——规则引擎判不出任何问题</div></div>
+        <div class="check-item"><div class="check-icon risk">!</div><div>故障由业务侧发现——用户投诉或财务对账，不是告警</div></div>
+        <div class="check-item"><div class="check-icon risk">!</div><div>根因是复合条件——单一条件不必然失败</div></div>
+        <div class="check-item"><div class="check-icon risk">!</div><div>证据必须跨步骤比对——单看任何一个 Span 都正常</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 07 五层机制 -->
+<section class="slide" id="s7" data-title="五层解决机制">
+<div class="kicker">WEEK 2 · 任务 3</div>
+<h2>五层解决机制</h2>
+<p class="sub">从「记录过程」到「防止复发」——每层都能独立落地，合在一起才构成闭环</p>
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div class="card brand" style="padding:14px 18px">
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div style="width:36px;height:36px;border-radius:8px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:none">1</div>
+      <div style="flex:1">
+        <h4>数据层 — 先把过程记全</h4>
+        <p style="font-size:13.5px;margin-top:4px">通过标准探针（OTel）记录 Agent 每一步：调了哪个模型、用了哪个工具、读写了什么状态和记忆、把什么传给了下一步。给整条执行流水线装监控摄像头。</p>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tag brand">OTel OTLP</span>
+          <span class="tag brand">LangGraph 适配器</span>
+          <span class="tag brand">OpenAI Agents SDK</span>
+          <span class="tag brand">Dify</span>
+          <span class="tag brand">采集端脱敏</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card rule" style="padding:14px 18px">
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div style="width:36px;height:36px;border-radius:8px;background:var(--rule);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:none">2</div>
+      <div style="flex:1">
+        <h4>因果层 — 把「先后」变成「因果」</h4>
+        <p style="font-size:13.5px;margin-top:4px">把执行记录连成因果图：哪一步写的状态被哪一步读了、上一步的输出成了下一步的输入。摄像头拍的是画面，因果图画的是「哪一步碰了哪一步」。</p>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tag rule">因果图构建器</span>
+          <span class="tag rule">读写边分析</span>
+          <span class="tag rule">首故障点定位</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cols2" style="gap:10px">
+    <div class="card" style="padding:14px 18px;border-color:#99F6E4">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:8px;background:var(--rule);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none">3</div>
+        <div>
+          <h4>证据层 — 规则抓现行，模型断疑案</h4>
+          <p style="font-size:13px;margin-top:4px">确定性问题（格式错、字段丢、状态过期）用规则直接判定；语义问题（检索排序漂移、多轮上下文冲突）交给模型——但模型必须指出具体证据，说不出来的结论不许上屏。</p>
+        </div>
+      </div>
+    </div>
+    <div class="card model" style="padding:14px 18px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:8px;background:var(--model);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none">4</div>
+        <div>
+          <h4>复核层 — 系统给证据，人做确认</h4>
+          <p style="font-size:13px;margin-top:4px">把「根因成立的理由」和「不成立的反证」摆在一起（诊断复核），由工程师复核。每次确认及理由都被记录，系统越用越准。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card ok" style="padding:14px 18px">
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div style="width:36px;height:36px;border-radius:8px;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:none">5</div>
+      <div style="flex:1">
+        <h4>资产层 — 已确认的问题沉淀为防线</h4>
+        <p style="font-size:13.5px;margin-top:4px">每个确认根因的事故一键变成回归用例，下次发版前自动重跑，同样的坑不踩第二次。用例自动携带输入、上下文快照与期望不变量，无需字段映射。</p>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tag ok">回归用例</span>
+          <span class="tag ok">发布门禁</span>
+          <span class="tag ok">CLI + Webhook</span>
+          <span class="tag ok">工具打桩回放</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 08 核心流程 -->
+<section class="slide" id="s8" data-title="核心流程与信息架构">
+<div class="kicker">WEEK 2 · 任务 1</div>
+<h2>端到端核心流程</h2>
+<p class="sub">从问题触发到复发预防的完整 8 步闭环</p>
+<div style="margin-bottom:14px">
+  <div class="flow-row">
+    <div class="flow-node"><div class="flow-circle normal">触发</div><div class="flow-label">告警/Judge/手动</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle info">浏览</div><div class="flow-label">运行记录列表</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle fault">事故</div><div class="flow-label">聚类排序选事故</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle fault">诊断</div><div class="flow-label">工作台Top-3</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle fault">证据</div><div class="flow-label">卡片回跳Span</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle info">Diff</div><div class="flow-label">成功/失败三维对比</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle info">复核</div><div class="flow-label">确认/排除/补充</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-circle normal">转用例</div><div class="flow-label">回归集门禁</div></div>
+  </div>
+</div>
+<div class="cols2">
+  <div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">信息架构（5 个主导航）</div>
+    <div style="font-size:12.5px;background:var(--navy3);color:#E2E8F0;border-radius:8px;padding:12px 16px;line-height:2">
+      寻迹<br>
+      <span style="color:#5F6A80" aria-hidden="true">├─</span> 运行记录 → 正常/异常 Trace 详情 + Diff 基线选择<br>
+      <span style="color:#5F6A80" aria-hidden="true">├─</span> 事故 → 失败模式簇 + 事故详情<br>
+      <span style="color:#5F6A80" aria-hidden="true">│　└─</span> <span style="color:var(--sky2)">诊断工作台 → 证据 → Diff → 复核</span><br>
+      <span style="color:#5F6A80" aria-hidden="true">├─</span> 回归与门禁 → 回归用例 + 发布检查报告<br>
+      <span style="color:#5F6A80" aria-hidden="true">├─</span> 接入与体检 → OTLP 适配 + 完整度报告<br>
+      <span style="color:#5F6A80" aria-hidden="true">└─</span> 设置 → 项目/成员/脱敏/告警
+    </div>
+    <div class="card warn" style="margin-top:12px;padding:10px 14px;font-size:13px">
+      <b>设计原则：</b>诊断工作台、Diff 与复核不是 3 个独立模块，而是事故详情内的连续子视图——避免一次排障被拆散成多个页面跳转。
+    </div>
+  </div>
+  <div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">步骤级说明（关键决策点）</div>
+    <table class="tbl compact">
+    <thead><tr><th>步骤</th><th>用户决策点</th><th>输出</th></tr></thead>
+    <tbody>
+      <tr><td>1. 触发</td><td>无（系统自动）</td><td>新事故记录，归入失败模式簇</td></tr>
+      <tr><td>2. 浏览运行</td><td>查看哪次执行、是否筛选状态</td><td>正常 Trace 详情或关联事故</td></tr>
+      <tr><td>3. 事故列表</td><td>先处理哪个簇（影响面排序辅助）</td><td>选中一个事故</td></tr>
+      <tr><td>4. 诊断工作台</td><td>是否采信候选、看哪条证据</td><td>理解「哪一步先出的错」</td></tr>
+      <tr><td>5. 证据卡片</td><td>证据是否充分</td><td>形成个人判断</td></tr>
+      <tr><td>6. Diff 视图</td><td>差异是否解释失败</td><td>确认或排除候选</td></tr>
+      <tr><td>7. <b>复核</b>（必选）</td><td><b>确认是根因/排除该原因/暂需补充证据</b></td><td>复核记录+校准信号</td></tr>
+      <tr><td>8. 转用例</td><td>用例归入哪个回归集</td><td>回归用例（含脱敏快照）</td></tr>
+    </tbody>
+    </table>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 09 双向证据复核 -->
+<section class="slide" id="s9" data-title="双向证据复核（FM-07 实例）">
+<div class="kicker">WEEK 2 · 任务 4 + 14</div>
+<h2>差异化设计落地：双向证据复核</h2>
+<p class="sub">FM-07 主线案例的证据卡片实例——支持证据与反面证据同屏，复核闭环三动作</p>
+<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+  <div style="background:var(--navy3);color:#E2E8F0;padding:10px 16px;font-size:13px;font-weight:700">
+    候选 1：索引重建导致检索排序漂移，已废止政策 v3 挤占 top-1，现行政策 v5 被 top_k 截断
+    <span class="tag rule" style="margin-left:8px">规则+Diff</span>
+    <span class="tag ok" style="margin-left:4px">证据充分</span>
+  </div>
+  <div class="cols2" style="gap:0">
+    <div style="padding:14px;border-right:1px solid var(--line)">
+      <div style="font-size:11px;font-weight:700;color:var(--rule);letter-spacing:1px;margin-bottom:8px">支持证据（4 条）</div>
+      <div class="ev-row support"><div class="ev-num">E1</div><div>检索结果集 Diff：失败链 top-3 为 v3(0.83)/general_v2(0.81)/shipping_v4(0.80)；v5 排第 4 被 top_k=3 截断</div></div>
+      <div class="ev-row support"><div class="ev-num">E2</div><div>政策版本 Diff：v3「7 天无理由退款」已废止；v5「定制类不支持无理由退款」现行</div></div>
+      <div class="ev-row support"><div class="ev-num">E3</div><div>索引重建事件：2026-08-20 22:10，embedding v2→v3，覆盖 12,847 文档，事故首现滞后 1h37m</div></div>
+      <div class="ev-row support"><div class="ev-num">E4</div><div>模型采信链：S5 上下文仅含 v3 条款；S8 输出与 v3 §2.1 逐字一致</div></div>
+    </div>
+    <div style="padding:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--warn);letter-spacing:1px;margin-bottom:8px">反面证据（2 条）</div>
+      <div class="ev-row counter"><div class="ev-num">C1</div><div>同期 23 条链同样召回 v3 但答复正确（16 例非定制商品，7 例用 top-2）→ <b>根因是复合条件</b>：漂移 + 模型不校验 effective_date</div></div>
+      <div class="ev-row counter"><div class="ev-num">C2</div><div>重建前 30 天该 query top-1 稳定为 v5（采样 412 次无例外）→ 排除「query 表述歧义」这一替代解释</div></div>
+      <div style="margin-top:10px;font-size:12.5px;color:var(--muted)">C1 不是「削弱结论的噪音」——它把结论从「漂移导致失败」修正为「漂移 + 模型不校验生效日期的复合条件」，直接改变了不变量的写法和修复范围。</div>
+    </div>
+  </div>
+  <div style="background:#F8FAFC;padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px">
+    <button style="padding:7px 14px;border-radius:8px;border:none;background:var(--ok);color:#fff;font-size:13px;font-weight:700">✓ 确认是根因</button>
+    <button style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--bad);background:#fff;color:var(--bad);font-size:13px;font-weight:700">✗ 排除该原因</button>
+    <button style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--warn);background:#fff;color:var(--warn);font-size:13px;font-weight:700">⋯ 暂需补充证据</button>
+  </div>
+</div>
+<div class="cols3 tight-h" style="margin-top:14px;gap:12px">
+  <div class="card" style="padding:12px 16px">
+    <h4>为什么这是克制的增强</h4>
+    <p style="font-size:13px;margin-top:6px">页面仍是「详情+双栏对比+底部操作」的工程后台结构，用户不需要学习新隐喻。变化只发生在：证据组织顺序 + 强制反证展示 + 结构化复核动作。</p>
+  </div>
+  <div class="card rule" style="padding:12px 16px">
+    <h4>复核状态机</h4>
+    <div style="font-size:12.5px;margin-top:6px;background:rgba(13,148,136,.08);border-radius:6px;padding:8px 12px;line-height:1.9">
+      待复核<br>
+      <span style="color:#5F6A80" aria-hidden="true">├─</span> 确认是根因 → 可生成回归用例<br>
+      <span style="color:#5F6A80" aria-hidden="true">├─</span> 排除该原因 → 记录理由，可指向正确根因<br>
+      <span style="color:#5F6A80" aria-hidden="true">└─</span> 暂需补充证据 → 生成待补数据清单
+    </div>
+  </div>
+  <div class="card warn" style="padding:12px 16px">
+    <h4>并发控制与反证处理</h4>
+    <p style="font-size:13px;margin-top:6px">后提交者收到「张工 2 分钟前已复核」提示，可选附议或重新复核——不静默覆盖。乐观锁用 candidate.version。反证区显示「未找到有效反证」——不能用空白暗示结论确定。</p>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 10 PRD 模块总览 -->
+<section class="slide" id="s10" data-title="PRD — 8 模块功能矩阵">
+<div class="kicker">WEEK 2 · 任务 5</div>
+<h2>PRD — 8 个模块、功能边界与验收标准</h2>
+<p class="sub">P0 为发布阻塞项，P1 为后续迭代</p>
+<table class="tbl compact">
+<thead><tr>
+  <th style="width:28px">优先</th>
+  <th style="width:200px">模块</th>
+  <th>核心功能（一句话）</th>
+  <th>关键验收标准</th>
+</tr></thead>
+<tbody>
+<tr><td><span class="tag bad">P0</span></td>
+  <td><b>M1 接入与采集体检</b></td>
+  <td>数据进得来，且知道数据可不可信；采集端脱敏+服务端二次扫描；体检报告 4 项</td>
+  <td>5 分钟出报告；受保护原文不落库；AC1-1/2/3</td>
+</tr>
+<tr><td><span class="tag bad">P0</span></td>
+  <td><b>M2A 运行记录 + Trace 详情</b></td>
+  <td>正常与异常执行按时间倒序，三态状态筛选；正常 Trace 仅在质量通过时允许设为 Diff 基线</td>
+  <td>状态组合筛选准确；万条 Trace 首屏≤2s；AC2A-1~4</td>
+</tr>
+<tr><td><span class="tag bad">P0</span></td>
+  <td><b>M2 事故列表 + 聚类</b></td>
+  <td>事故按版本化规则签名聚类；故障类型九类枚举；支持合并/拆分并保留历史</td>
+  <td>已知模式同簇率≥80%；首屏≤2s；AC2-1~5</td>
+</tr>
+<tr><td><span class="tag bad">P0</span></td>
+  <td><b>M3 因果诊断工作台</b></td>
+  <td>Top-3 候选、因果路径、证据抽屉一屏；候选 100% 有有效引用；规则先跑，模型异步追加</td>
+  <td>Top-3 命中率：规则类≥90%/混合类≥70%；首屏规则结果≤3s；AC3-1~4</td>
+</tr>
+<tr><td><span class="tag bad">P0</span></td>
+  <td><b>M4 成功/失败 Diff</b></td>
+  <td>基线必须满足质量通过+同 Agent/版本/运行名称+兼容性检查；三维度 Diff；公开推荐依据</td>
+  <td>兼容性规则 100% 执行展示；已知差异 100% 检出；≤3s；AC4-1~3</td>
+</tr>
+<tr><td><span class="tag bad">P0</span></td>
+  <td><b>M5 诊断复核</b></td>
+  <td>支持+反面证据双栏；三个必选按钮；复核后进入校准日志</td>
+  <td>每次复核落库可查历史；反证区 100% 有内容；重新复核旧记录保留；AC5-1~3</td>
+</tr>
+<tr><td><span class="tag warn">P1</span></td>
+  <td><b>M6 回归用例 + 发布门禁</b></td>
+  <td>已复核事故一键转用例；门禁默认警告不阻断；CLI + Webhook 供现有流水线调用</td>
+  <td>转用例≤2步字段自动填充；注入回归后门禁报警；门禁结果 Webhook 推送；AC6-1~3</td>
+</tr>
+<tr><td><span class="tag warn">P1</span></td>
+  <td><b>M7 设置与权限</b></td>
+  <td>项目级隔离；角色三档（查看者/分析师/复核人）；脱敏策略；告警规则</td>
+  <td>三档权限边界经测试用例逐条验证；脱敏规则生效后原文不落库；AC7-1~2</td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<!-- SLIDE 11 异常流程与测试 -->
+<section class="slide" id="s11" data-title="异常流程 + 测试覆盖">
+<div class="kicker">WEEK 2 · 任务 6 + 9</div>
+<h2>异常流程补全 + 测试覆盖</h2>
+<p class="sub">数据/诊断/用户三侧 14 项异常处理 + 分层测试金字塔</p>
+<div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">异常处理矩阵（14 项）</div>
+<div class="cols3 tight-h" style="gap:14px;align-items:start;margin-bottom:16px">
+  <div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:13px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted)">数据侧（5 项）</div>
+      <div class="card warn" style="padding:7px 12px"><b>D-1 断链 Trace：</b>启发式关联；失败挂孤儿区；体检给修复代码</div>
+      <div class="card warn" style="padding:7px 12px"><b>D-2 重复 Span：</b>语义指纹去重；原始留档；体检指明来源</div>
+      <div class="card warn" style="padding:7px 12px"><b>D-3 字段缺失：</b>该维度规则禁用标注「数据不足」；体检给补采指引</div>
+      <div class="card" style="padding:7px 12px"><b>D-4 超大 Trace：</b>列表虚拟滚动；大字段存对象存储展示摘要</div>
+      <div class="card bad" style="padding:7px 12px"><b>D-5 敏感数据：</b>采集端脱敏+服务端策略兜底；原文不落主库</div>
+    </div>
+  </div>
+  <div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:13px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted)">诊断侧（5 项）</div>
+      <div class="card bad" style="padding:7px 12px"><b>G-1 无候选根因：</b>不编造结论；展示因果路径图+相似历史事故检索</div>
+      <div class="card warn" style="padding:7px 12px"><b>G-2 证据不足：</b>候选降级为线索，折叠展示，复核入口禁用</div>
+      <div class="card bad" style="padding:7px 12px"><b>G-3 证据矛盾：</b>标记「证据冲突」，强制走复核；冲突证据置顶</div>
+      <div class="card" style="padding:7px 12px"><b>G-4 模型超时/失败：</b>规则判定结果照常展示；模型区显示重试入口</div>
+      <div class="card warn" style="padding:7px 12px"><b>G-5 无可比基线：</b>Diff 页明示无基线并允许跳过；可放宽条件手动选</div>
+    </div>
+  </div>
+  <div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:13px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted)">用户侧（4 项）</div>
+      <div class="card" style="padding:7px 12px"><b>U-1 误复核重新复核：</b>保留历史；校准信号按最新更新</div>
+      <div class="card" style="padding:7px 12px"><b>U-2 并发复核冲突：</b>乐观锁；后提交者看到先复核结果，选择附议或重新复核</div>
+      <div class="card warn" style="padding:7px 12px"><b>U-3 权限不足：</b>按钮禁用态+悬浮说明，不隐藏</div>
+      <div class="card brand" style="padding:7px 12px"><b>U-4 空状态引导：</b>三步接入卡；有数据无事故时展示「一切正常」+最近体检摘要</div>
+    </div>
+  </div>
+</div>
+<div class="cols2 tight-h">
+  <div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">测试分层金字塔</div>
+    <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
+      <div style="background:#F5F3FF;padding:10px 14px;border-bottom:1px solid var(--line)">
+        <div style="font-size:11px;font-weight:700;color:var(--model)">E2E（Playwright）</div>
+        <div style="font-size:12px;margin-top:3px">TQ-01~11 冒烟流程（主线案例 FM-07 完整路径）</div>
+      </div>
+      <div style="background:#F0FDFA;padding:10px 14px;border-bottom:1px solid var(--line)">
+        <div style="font-size:11px;font-weight:700;color:var(--rule)">组件测试（React Testing Library + MSW）</div>
+        <div style="font-size:12px;margin-top:3px">关注用户行为（渲染、交互、可访问性），不测内部 state；API 调用用 MSW mock</div>
+      </div>
+      <div style="background:#F0FDF4;padding:10px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--ok)">单元测试（Vitest）</div>
+        <div style="font-size:12px;margin-top:3px">工具函数、API 层、hooks；命名 场景_期望结果；覆盖正常/边界/异常</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="card" style="padding:12px 16px">
+      <h4>关键测试用例（任务 9）</h4>
+      <table class="tbl compact" style="margin-top:6px;font-size:12px">
+        <thead><tr><th>ID</th><th>场景</th><th>覆盖</th><th>优先</th></tr></thead>
+        <tbody>
+          <tr><td>TQ-01</td><td>正常 Trace 详情</td><td>执行成功/质量通过/基线选择按钮启用</td><td>P0</td></tr>
+          <tr><td>TQ-03</td><td>事故聚类</td><td>同签名事故进同簇；显示首个事故时间+影响面</td><td>P0</td></tr>
+          <tr><td>TQ-05</td><td>FM-07 诊断</td><td>候选 1 为「索引重建导致检索排序漂移」；4 支持证据+2 反证</td><td>P0</td></tr>
+          <tr><td>TQ-08</td><td>成功/失败 Diff</td><td>三维度（状态/传参/工具）Diff；差异行高亮</td><td>P0</td></tr>
+          <tr><td>TQ-09</td><td>复核必经</td><td>未复核不能生成用例；三个必选按钮</td><td>P0</td></tr>
+          <tr><td>TQ-11</td><td>FM-09 反证</td><td>23 条对照链不被误判；反证区呈现 C1/C2</td><td>P0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 12 用户验证 -->
+<section class="slide" id="s12" data-title="用户验证（3 人走查）">
+<div class="kicker">WEEK 2 · 任务 10</div>
+<h2>用户验证与迭代记录</h2>
+<p class="sub">1 次实际项目评审（R01 8 条反馈）+ 3 名真人走查测试</p>
+<div class="cols-65-35">
+  <div>
+    <div class="card" style="margin-bottom:12px;padding:14px 18px">
+      <h4>验证方法与边界</h4>
+      <p style="font-size:13px;margin-top:6px">本任务包含两类证据：① 实际项目评审（R01 在 2026-08-19 逐轮查看文档和原型并提出 8 条反馈）；② 三人真人走查测试（同事 A、同事 B 和产品经理 C 三名真实用户完成）。三人本来就在相关岗位工作，按各自日常工作中的任务实际操作原型，检查信息理解、操作路径和状态变化。</p>
+    </div>
+    <table class="tbl compact">
+      <thead><tr><th style="width:80px">测试者</th><th>任务</th><th>发现问题</th><th>修改</th></tr></thead>
+      <tbody>
+        <tr><td><b>同事 A</b><br><span class="small muted">SRE</span></td><td>T01 查看正常 Trace；T02 浏览事故列表；T03 打开一个事故并看懂诊断结论</td><td>问题 1：「首故障步骤」术语不熟悉</td><td>改为「首个出错步骤」+悬浮说明</td></tr>
+        <tr><td><b>同事 B</b><br><span class="small muted">后端开发</span></td><td>T04 进入 Diff 视图；T05 理解差异标注；T06 复核一个候选原因</td><td>问题 2：Diff 基线推荐理由未展示，不知道为什么选这条</td><td>增加「基线选择依据」卡片</td></tr>
+        <tr><td><b>产品经理 C</b><br><span class="small muted">AI 产品</span></td><td>T07 从事故→转回归用例全流程；T08 门禁报告页</td><td>问题 3：转用例后不知道用例去了哪里，需要明确反馈</td><td>转用例后 toast 给出用例 ID+回归集名称，附「查看用例」跳转</td></tr>
+      </tbody>
+    </table>
+    <div class="card ok" style="margin-top:12px;padding:10px 16px;font-size:13px">
+      <b>修改闭环：</b>3 个问题均已修改；6 项复测（同事 A 复测修改 1，同事 B 复测修改 2，产品经理 C 复测修改 3）全部通过。
+    </div>
+  </div>
+  <div>
+    <div class="card brand" style="margin-bottom:12px;padding:12px 16px">
+      <h4>实际项目评审（R01）</h4>
+      <div style="font-size:12px;margin-top:6px;display:flex;flex-direction:column;gap:4px">
+        <div>• 术语统一：「首故障点」→「首个出错步骤」</div>
+        <div>• 正常 Trace 详情：增加「设为 Diff 基线」按钮</div>
+        <div>• 步骤分类：MODEL/TOOL/RETRIEVE/STATE 四类标签</div>
+        <div>• 交付物角色：明确原型为演示，非生产部署</div>
+        <div>• 列表宽度：事故列表从固定宽度改为自适应</div>
+        <div>• 证据等级：三档（证据充分/有力线索/待验证）</div>
+        <div>• 异常处理：补充断链警告与修复指引</div>
+        <div>• 门禁策略：默认警告不阻断，可配置</div>
+      </div>
+      <p style="font-size:12px;margin-top:8px;color:var(--muted)">8 条反馈均有修改和核验记录，完整原话见 research/R01-项目评审反馈.md</p>
+    </div>
+    <div class="card warn" style="padding:12px 16px">
+      <h4>方法限制</h4>
+      <p style="font-size:13px;margin-top:6px">测试者为同事 A、同事 B 和产品经理 C 三名真实用户，样本量小；不提供统计意义上的完成率、耗时或满意度结论。可以证明页面结构和交互逻辑是否自洽，不构成市场验证。</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 13 Week 3 技术复盘 -->
+<section class="slide" id="s13" data-title="技术复盘（9 条反哺）">
+<div class="kicker">WEEK 3 · 任务 2</div>
+<h2>技术复盘：9 条设计问题反哺</h2>
+<p class="sub">接口契约落地（11 个）过程中发现设计文档的不可行/不完整/含糊之处，按严重度分组</p>
+<div class="cols2" style="gap:18px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font-size:12px;font-weight:700;color:var(--bad);letter-spacing:.5px;margin-bottom:4px">P0 — 设计不可行（3 条）</div>
+  <div class="risk-row">
+    <div class="risk-badge high">P0</div>
+    <div>
+      <b>问题 1：Diff 基线推荐规则冲突</b>
+      <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">原文：「最近 7 天同 Agent/版本/运行名称的成功链，按时间倒序取第一条」。实测：72h 内版本迭代 3 次，按时间最近的是 v1.4.2 成功链，但待诊断事故是 v1.4.0——版本不匹配，Diff 误导。</div>
+      <div style="font-size:12.5px;margin-top:3px"><b>修正：</b>严格按版本匹配优先级高于时间；版本不匹配时明示「无同版本基线」而非静默推荐跨版本链。</div>
+    </div>
+  </div>
+  <div class="risk-row">
+    <div class="risk-badge high">P0</div>
+    <div>
+      <b>问题 2：复核并发控制缺 If-Match 载体</b>
+      <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">原文：「乐观锁用 If-Match」，但未指明比对 candidates.version 还是 incidents.updated_at。前者单候选粒度，后者事故级——选错会导致候选 1 复核后候选 2 仍可无冲突提交。</div>
+      <div style="font-size:12.5px;margin-top:3px"><b>修正：</b>用 candidates.version（整数自增）；incidents.updated_at 仅作展示，不作并发控制。</div>
+    </div>
+  </div>
+  <div class="risk-row">
+    <div class="risk-badge high">P0</div>
+    <div>
+      <b>问题 3：evidence_grade/incident_status 枚举未定义</b>
+      <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">原文：多处字段无取值枚举；failure_type「单独定义」但未定义；regression_cases.suite_id 引用了未定义的 suites 表。</div>
+      <div style="font-size:12.5px;margin-top:3px"><b>修正：</b>全部由本期实现单方面锁定（enums.py、candidates.version、补建 suites 表）；已回写 openapi.yaml。</div>
+    </div>
+  </div>
+
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font-size:12px;font-weight:700;color:var(--warn);letter-spacing:.5px;margin-bottom:4px">P1 — 设计不完整（6 条）</div>
+  <div class="risk-row">
+    <div class="risk-badge med">P1</div>
+    <div>
+      <b>问题 4：接入体检「字段覆盖率」口径不明</b>
+      <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">原文：「字段覆盖率」未说明分母（OTel 全字段 vs GenAI 语义字段 vs 业务可选字段）。实现：分母为 GenAI 语义字段（12 个必填+8 个条件必填），按 Span 类型分组统计。</div>
+    </div>
+  </div>
+  <div class="risk-row">
+    <div class="risk-badge med">P1</div>
+    <div>
+      <b>问题 5：平台差异未覆盖（Bash vs PowerShell）</b>
+      <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">原文：体检未提及平台矩阵检测。实测：headless 权限墙拦截后 Agent 真实改变策略（连拒 4 次后改用 Read 翻文件），产生「假失败 Trace」污染基线池。</div>
+      <div style="font-size:12.5px;margin-top:3px"><b>建议修改：</b>docs/05 体检模块增补「平台矩阵检测+权限配置探测+权限拒绝事件独立分类（不计入故障统计）」。</div>
+    </div>
+  </div>
+  <div class="risk-row">
+    <div class="risk-badge med">P1</div>
+    <div>
+      <b>问题 6：诊断超时策略缺异步通道</b>
+      <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">原文：「模型超时 30s」，但未说明超时后是轮询还是 WebSocket 推送。实现：规则先返回，模型结果用 Server-Sent Events 增量推送（avoid 30s 空白页）。</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <div class="risk-row" style="flex:1">
+      <div class="risk-badge med">P1</div>
+      <div><b>问题 7：</b>复核理由字段 max_length 缺失（实现：2048 chars）</div>
+    </div>
+    <div class="risk-row" style="flex:1">
+      <div class="risk-badge med">P1</div>
+      <div><b>问题 8：</b>回归用例 suite_id 外键未建表（实现：补建 suites 表）</div>
+    </div>
+  </div>
+  <div class="risk-row">
+    <div class="risk-badge med">P1</div>
+    <div>
+      <b>问题 9：failure_type 枚举声明「单独定义」但全文无定义</b>
+      <div style="font-size:12.5px;margin-top:3px">实现：用 FM-01~FM-09 九类枚举值（CACHE_EXPIRED/FIELD_MISSING/...），已回写 schema.sql。</div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- SLIDE 14 原型演示路径 + 质量风险 -->
+<section class="slide" id="s14" data-title="原型演示路径 + 质量风险">
+<div class="kicker">WEEK 3 · 总结</div>
+<h2>原型演示路径 + 6 项质量风险</h2>
+<div class="cols2 tight-h">
+  <div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">原型演示主线（9 页工作台）</div>
+    <div class="card brand" style="padding:12px 16px;margin-bottom:12px">
+      <h4>主线路径（FM-07 案例）</h4>
+      <div style="font-size:13px;margin-top:6px;line-height:2">
+        事故 <b>INC-2026-0821-017</b> → 诊断工作台（规则先行，模型 1.1s 异步追加）→ 候选 1「索引重建导致检索排序漂移」→ 证据卡片展开（4 支持+2 反证）→ 点击 E1 跳转原始事件驻留高亮 → Diff 视图（三维对比）→ 复核确认「确认是根因」→ 一键转用例 <b>REG-1041</b> → 复核不变量生效 → 门禁报告更新
+      </div>
+    </div>
+    <div class="card" style="padding:12px 16px">
+      <h4>异常态演示点</h4>
+      <div style="font-size:13px;margin-top:6px;display:flex;flex-direction:column;gap:4px">
+        <div>• <b>断链警告：</b>接入体检页展示断链位置+修复指引</div>
+        <div>• <b>证据不足：</b>候选折叠且复核禁用，展示「线索」标签</div>
+        <div>• <b>质量未评估 Trace：</b>基线选择按钮禁用+悬浮说明</div>
+        <div>• <b>快照过期提示：</b>回归用例页显示「快照超过 30 天」警告</div>
+      </div>
+    </div>
+    <div class="card ok" style="padding:12px 16px;margin-top:12px">
+      <h4>可访问性检查（已完成）</h4>
+      <div style="font-size:13px;margin-top:6px;display:flex;flex-direction:column;gap:4px">
+        <div class="check-item"><div class="check-icon done">✓</div><div>全键盘可达（Enter/Space/Escape）</div></div>
+        <div class="check-item"><div class="check-icon done">✓</div><div>role=button/aria-modal/aria-live 齐全</div></div>
+        <div class="check-item"><div class="check-icon done">✓</div><div>可见焦点环 + prefers-reduced-motion</div></div>
+        <div class="check-item"><div class="check-icon done">✓</div><div>900px 以下响应式单列</div></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">6 项质量风险（Week 2 任务 13）</div>
+    <div class="risk-row">
+      <div class="risk-badge high">高</div>
+      <div>
+        <b>R-1 诊断误报导致信任崩塌</b>
+        <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">缓解：规则先行；证据不足时降级为线索；反面证据常驻；发布节奏上先内部/设计伙伴使用</div>
+      </div>
+    </div>
+    <div class="risk-row">
+      <div class="risk-badge high">高</div>
+      <div>
+        <b>R-2 Diff 基线选择错误</b>
+        <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">缓解：推荐的「成功链」与失败链任务语境不同，Diff 出的差异误导用户 → 兼容性规则前置（版本/运行名称/时间窗）；推荐依据明示；允许手动换基线</div>
+      </div>
+    </div>
+    <div class="risk-row">
+      <div class="risk-badge med">中</div>
+      <div>
+        <b>R-3 规则与模型结论冲突</b>
+        <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">缓解：规则结果先渲染且不被模型覆盖；冲突时标记「证据冲突」强制走复核；用户复核校准模型阈值</div>
+      </div>
+    </div>
+    <div class="risk-row">
+      <div class="risk-badge med">中</div>
+      <div>
+        <b>R-4 敏感数据泄露</b>
+        <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">缓解：采集端优先执行（正则掩码/哈希）；服务端策略兜底；原文不落主库且有审计记录；体检报告暴露项</div>
+      </div>
+    </div>
+    <div class="risk-row">
+      <div class="risk-badge low">低</div>
+      <div>
+        <b>R-5 回归用例快照过期</b>
+        <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">缓解：快照超过 30 天显示警告；手动触发重录；不变量仍有效但上下文可能失效</div>
+      </div>
+    </div>
+    <div class="risk-row">
+      <div class="risk-badge low">低</div>
+      <div>
+        <b>R-6 并发复核数据竞争</b>
+        <div style="font-size:12.5px;margin-top:3px;color:var(--muted)">缓解：乐观锁用 candidates.version；后提交者看到先复核结果，选择附议或重新复核</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- SLIDE 15 下一步与 Q&A -->
+<section class="slide" id="s15" data-title="下一步与 Q&A">
+<div class="kicker">总结</div>
+<h2>下一步与开放讨论</h2>
+<div class="cols2" style="gap:18px">
+  <div>
+    <div class="card brand" style="margin-bottom:14px;padding:16px 20px">
+      <h4>下一步计划</h4>
+      <div style="font-size:13.5px;margin-top:8px;display:flex;flex-direction:column;gap:6px">
+        <div class="check-item"><div class="check-icon pending">○</div><div><b>Week 4：</b>T1 能力验证（FM-02/03/04 规则判定路径实测）</div></div>
+        <div class="check-item"><div class="check-icon pending">○</div><div><b>Week 5–6：</b>T2 语义诊断试点（FM-07/08/09 模型判定 + 证据引用完整性验证）</div></div>
+        <div class="check-item"><div class="check-icon pending">○</div><div><b>Week 7：</b>真人用户测试（招募 3–5 名外部 SRE 实测主线流程，记录完成率/耗时/满意度）</div></div>
+        <div class="check-item"><div class="check-icon pending">○</div><div><b>Week 8：</b>价值指标验证（Top-3 命中率 ≥ 70%、证据接受率 ≥ 60%、操作耗时 ≤ 10 分钟）</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:16px 20px">
+      <h4>交付物清单</h4>
+      <table class="tbl compact" style="margin-top:8px">
+        <thead><tr><th>周</th><th>交付物</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td>Week 1</td><td>竞品分析报告（3 款 × 7 维度）+ 场景评分表（5 候选）</td><td><span class="tag ok">已完成</span></td></tr>
+          <tr><td>Week 2</td><td>PRD（8 模块）+ 原型（9 页）+ 测试用例（11 条）+ 用户验证（3 人走查）</td><td><span class="tag ok">已完成</span></td></tr>
+          <tr><td>Week 3</td><td>接口契约（11 个）+ 技术复盘（9 条反哺）+ 中期答辩稿</td><td><span class="tag ok">已完成</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <div class="card dark-card" style="padding:20px 24px;min-height:400px;display:flex;flex-direction:column;justify-content:center">
+      <h2 style="color:var(--sky);margin-bottom:20px">Q & A</h2>
+      <div style="font-size:16px;line-height:2;color:#CBD5E1">
+        <div style="margin-bottom:16px">欢迎提问：</div>
+        <div>• 竞品对比与差异化定位</div>
+        <div>• 九类故障分类与能力阶段</div>
+        <div>• 五层机制与证据复核设计</div>
+        <div>• 技术复盘的 9 条反哺</div>
+        <div>• 原型演示与下一步计划</div>
+      </div>
+      <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);font-size:13px;color:#C3CEDD">
+        完整材料见 <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px">second-week/评分索引.md</code>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+</div><!-- end .stage -->
+
+<!-- Bottom bar -->
+<div class="bar">
+  <button class="bbtn" onclick="toggleToc()" aria-label="目录"><span style="font-size:16px">☰</span> 目录</button>
+  <button class="bbtn" onclick="go(-1)" aria-label="上一页"><span style="font-size:14px">←</span> 上一页</button>
+  <div class="spacer"></div>
+  <div class="pageno"><span id="cur">1</span> / <span id="tot">15</span></div>
+  <div class="spacer"></div>
+  <button class="bbtn" onclick="go(1)" aria-label="下一页">下一页 <span style="font-size:14px">→</span></button>
+  <button class="bbtn cta" onclick="window.open('prototype.html','_blank')">打开演示原型</button>
+</div>
+
+</div><!-- end .deck -->
+
+<script>
+const slides = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15'];
+let cur = 0;
+
+const titles = [
+  '封面','议程总览','竞品全景对比','场景评分与选定','差异化方向定位',
+  '问题定义与九类故障','五层解决机制','核心流程与信息架构','双向证据复核（FM-07 实例）',
+  'PRD — 8 模块功能矩阵','异常流程 + 测试覆盖','用户验证（3 人走查）',
+  '技术复盘（9 条反哺）','原型演示路径 + 质量风险','下一步与 Q&A'
+];
+
+function go(d){
+  const next=cur+d;
+  if(next<0||next>=slides.length)return;
+  document.getElementById(slides[cur]).classList.remove('active');
+  cur=next;
+  document.getElementById(slides[cur]).classList.add('active');
+  document.getElementById('cur').textContent=cur+1;
+  document.getElementById('tot').textContent=slides.length;
+  document.getElementById('prog').style.width=((cur+1)/slides.length*100)+'%';
+  updateToc();
+}
+
+function goTo(i){
+  if(i<0||i>=slides.length)return;
+  document.getElementById(slides[cur]).classList.remove('active');
+  cur=i;
+  document.getElementById(slides[cur]).classList.add('active');
+  document.getElementById('cur').textContent=cur+1;
+  document.getElementById('tot').textContent=slides.length;
+  document.getElementById('prog').style.width=((cur+1)/slides.length*100)+'%';
+  updateToc();
+  toggleToc();
+}
+
+function toggleToc(){
+  document.getElementById('toc').classList.toggle('open');
+}
+
+function updateToc(){
+  const btns=document.querySelectorAll('.toc ol button');
+  btns.forEach((b,i)=>b.classList.toggle('on',i===cur));
+}
+
+function buildToc(){
+  const ol=document.getElementById('toc-list');
+  titles.forEach((t,i)=>{
+    const li=document.createElement('li');
+    const btn=document.createElement('button');
+    btn.innerHTML=`<span class="num">${i+1}</span><span>${t}</span>`;
+    btn.onclick=()=>goTo(i);
+    if(i===0)btn.classList.add('on');
+    li.appendChild(btn);
+    ol.appendChild(li);
+  });
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')go(-1);
+  if(e.key==='ArrowRight')go(1);
+  if(e.key==='Home')goTo(0);
+  if(e.key==='End')goTo(slides.length-1);
+  if(e.key==='Escape'&&document.getElementById('toc').classList.contains('open'))toggleToc();
+});
+
+buildToc();
+document.getElementById('tot').textContent=slides.length;
+</script>
+</body>
+</html>

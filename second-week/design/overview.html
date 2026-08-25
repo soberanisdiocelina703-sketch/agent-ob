@@ -276,7 +276,7 @@
   .pager button small { display: block; color: var(--muted); font-size: 11.5px; }
   .pager button:disabled { visibility: hidden; }
 
-  /* 复核模拟 */
+  /* 复核交互 */
   .review { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); margin: 20px 0; background: var(--surface); }
   .review .case { background: var(--surface-2); border-bottom: 1px solid var(--line); padding: 12px 20px; font-size: 13.5px; display: flex; gap: 8px 16px; flex-wrap: wrap; align-items: center; }
   .review-cols { display: grid; grid-template-columns: 1fr 1fr; }
@@ -308,6 +308,26 @@
   ol.demo { max-width: 48em; margin: 12px 0 12px 22px; display: grid; gap: 8px; font-size: 14px; }
   ol.demo li { color: var(--muted); }
   ol.demo li b { color: var(--ink); }
+  .diagram-figure {
+    margin: 18px 0 24px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+  .diagram-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 9px;
+  }
+  .diagram-figure figcaption {
+    padding: 10px 4px 2px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
@@ -330,7 +350,7 @@
 
   <h3>核心流程</h3>
   <div class="flow">
-    <div class="fstep"><div class="fn">START</div><h5>Agent 运行</h5><p>成功与失败 Trace 统一采集</p></div>
+    <div class="fstep"><div class="fn">START</div><h5>Agent 运行</h5><p>正常、异常与质量未知 Trace 统一采集</p></div>
     <div class="arrow">→</div>
     <div class="fstep"><div class="fn">00</div><h5>运行记录</h5><p>筛选状态、查看正常详情或进入事故</p></div>
     <div class="arrow">→</div>
@@ -348,11 +368,11 @@
   <h3>三个差异化要点(对比竞品 AgentLoop)</h3>
   <div class="grid3">
     <div class="card"><span class="pill blue">差异 1</span><h3 style="margin:10px 0 6px">诊断工作台替代五视图切换</h3><p class="muted small">打开事故直接看到「症状 → 候选原因 → 证据 → 验证动作」,不用在五种视图之间来回找。</p></div>
-    <div class="card"><span class="pill blue">差异 2</span><h3 style="margin:10px 0 6px">证据卡片替代文本总结</h3><p class="muted small">AI 的每条结论必须附上可点击核对的原始记录,并同时给出反面证据和可信度。</p></div>
+    <div class="card"><span class="pill blue">差异 2</span><h3 style="margin:10px 0 6px">证据卡片替代文本总结</h3><p class="muted small">每条诊断候选必须附上可点击核对的原始记录，并同时给出反面证据和证据等级。</p></div>
     <div class="card"><span class="pill blue">差异 3</span><h3 style="margin:10px 0 6px">三步闭环替代跨模块跳转</h3><p class="muted small">从发现问题到生成防线,主要操作不超过三次:打开事故 → 复核 → 转用例。</p></div>
   </div>
 
-  <div class="callout"><b>基础运行可见性:</b>成功与失败 Trace 统一进入运行记录;正常 Trace 可查看完整步骤并设为 Diff 基线,但不触发诊断。 </div>
+  <div class="callout"><b>基础运行可见性：</b>所有 Trace 统一进入运行记录；执行状态、质量结论与事故状态分别展示。质量通过的正常 Trace 可作为 Diff 基线。 </div>
   <div class="callout"><b>设计增强「双向证据复核」:</b>在标准诊断详情页中并列展示支持证据、反面证据与其他解释，用户核对原始记录后确认。增强落在证据组织与反馈质量上，不增加角色隐喻和操作仪式。详见任务 14。</div>
   <div class="callout warn"><b>最大风险:</b>诊断误报导致信任崩塌。缓解:确定性规则先行、证据强制引用、把握不大就降级为「线索」、复核反馈持续校准。详见任务 13。</div>
 </section>
@@ -363,13 +383,18 @@
   <h2>核心流程设计</h2>
   <p class="intro">主流程覆盖「从问题被发现,到同类问题不再复发」的完整闭环,共 9 个步骤。每一步都明确:用户拿到什么、要做什么判断、产出什么。</p>
 
+  <figure class="diagram-figure">
+    <img src="xunji-end-to-end-flow.png" alt="寻迹端到端流程：Agent 运行进入运行记录，成功执行可查看正常 Trace 详情并设为 Diff 基线，失败执行进入事故诊断、复核、回归用例和发布门禁" loading="lazy">
+    <figcaption>成功 Trace 保留完整可见性并可作为对比基线；失败 Trace 在触发事故后进入诊断闭环，最终沉淀为发布门禁。</figcaption>
+  </figure>
+
   <h3>主流程 9 步</h3>
   <div class="tblwrap"><table>
     <tr><th>步骤</th><th>系统给你什么</th><th>你要做的判断</th><th>产出</th></tr>
     <tr><td><b>1 触发</b></td><td>告警、AI 评分过低或客诉自动立案</td><td>无(系统自动)</td><td>新事故记录,自动归入同类失败堆</td></tr>
     <tr><td><b>1A 浏览运行</b></td><td>成功与失败 Trace 列表</td><td>查看哪次执行、是否筛选状态</td><td>正常详情或关联事故</td></tr>
     <tr><td><b>2 浏览事故</b></td><td>事故列表 + 同类失败归堆</td><td>先处理哪一堆(按影响排序辅助)</td><td>选中一个事故</td></tr>
-    <tr><td><b>3 看诊断</b></td><td>最早出错的一步 + 前三候选原因 + 可信度</td><td>是否采信、先看哪条证据</td><td>知道「哪一步先出的错」</td></tr>
+    <tr><td><b>3 看诊断</b></td><td>最早出错的一步 + 前三候选原因 + 证据等级</td><td>是否采信、先看哪条证据</td><td>知道「哪一步先出的错」</td></tr>
     <tr><td><b>4 查证据</b></td><td>证据卡片(可点回原始记录)+ 反面证据</td><td>证据是否充分</td><td>形成自己的判断</td></tr>
     <tr><td><b>5 比差异</b></td><td>这次失败 vs 一次成功执行的并排对比</td><td>差异能否解释失败</td><td>确认或排除候选原因</td></tr>
     <tr><td><b>6 复核</b></td><td>支持证据 + 反面证据与其他解释并排呈现</td><td><b>确认是根因 / 排除该原因 / 暂需补充证据</b>(必选)</td><td>复核记录 + 系统校准信号</td></tr>
@@ -377,47 +402,53 @@
     <tr><td><b>8 门禁</b></td><td>新版本上线前自动重跑所有检查</td><td>出现警告后是否放行</td><td>发布检查报告</td></tr>
   </table></div>
 
-  <h3>信息架构:8 个主页面 + 正常 Trace 详情 <small>与竞品的根本差异:按「排障思路的推进」组织,不按「数据类型」组织</small></h3>
+  <h3>信息架构：5 个主导航 <small>工作台、对比和复核是事故详情里的连续子视图</small></h3>
   <div class="grid2">
-    <div class="card"><b>⓪ 运行记录 / 正常 Trace 详情</b><span class="pill blue" style="margin-left:8px">新增</span><p class="muted small">全部 / 成功 / 失败筛选；正常 Trace 可查看输入输出、完整步骤，并设为 Diff 基线</p></div>
-    <div class="card"><b>① 总览 / 事故列表</b><span class="pill blue" style="margin-left:8px">默认落地页</span><p class="muted small">同类失败归堆卡 + 事故列表(可按步骤类型、工具、时间、状态、可信度筛选)</p></div>
-    <div class="card"><b>② 诊断工作台</b><span class="pill blue" style="margin-left:8px">核心页面</span><p class="muted small">症状区、候选原因区、证据抽屉、因果路径小图、底部可展开完整记录</p></div>
-    <div class="card"><b>③ 成功 / 失败对比</b><p class="muted small">数据状态、步骤间传参、工具参数三个维度并排对比</p></div>
-    <div class="card"><b>④ 诊断复核</b><span class="pill purple" style="margin-left:8px">设计增强</span><p class="muted small">支持证据 / 反面证据并排 + 标准复核操作区</p></div>
-    <div class="card"><b>⑤ 回归集与门禁</b><p class="muted small">检查项列表 + 发布前运行报告(通过 / 警告 / 阻断)</p></div>
-    <div class="card"><b>⑥ 接入与采集体检</b><p class="muted small">接入引导 + 数据质量体检(覆盖率 / 断链 / 重复 / 隐私)</p></div>
-    <div class="card" style="grid-column: 1 / -1;"><b>⑦ 设置</b><p class="muted small">项目隔离、成员权限、隐私脱敏策略、告警规则</p></div>
+    <div class="card"><b>运行记录</b><span class="pill blue" style="margin-left:8px">全量入口</span><p class="muted small">分别筛选执行状态、质量结论、运行名称和版本；正常与异常 Trace 都可下钻</p></div>
+    <div class="card"><b>事故</b><span class="pill blue" style="margin-left:8px">默认处理入口</span><p class="muted small">失败模式簇 + 事故列表；进入事故后连续完成诊断工作台、证据核对、Diff 与复核</p></div>
+    <div class="card"><b>回归与门禁</b><p class="muted small">已确认事故生成回归用例，并在发布前输出通过 / 警告 / 阻断报告</p></div>
+    <div class="card"><b>接入与体检</b><p class="muted small">接入引导 + 完整度、断链、重复、敏感字段四项检查</p></div>
+    <div class="card" style="grid-column:1/-1"><b>设置</b><p class="muted small">项目隔离、成员权限、脱敏策略、告警规则和门禁模式</p></div>
   </div>
+
+  <h3>统一分类口径 <small>业务案例不定义平台分类</small></h3>
+  <div class="tblwrap"><table>
+    <tr><th>层级</th><th>用途</th><th>示例</th></tr>
+    <tr><td><b>Agent / 运行名称</b></td><td>定位业务归属，由接入方上报</td><td>订单助手 / 退款处理、订单改址</td></tr>
+    <tr><td><b>步骤类型</b></td><td>跨框架稳定筛选和统计</td><td>Agent、LLM、工具、检索、记忆、状态、路由/交接、安全检查、输入/输出、其他</td></tr>
+    <tr><td><b>步骤名称</b></td><td>搜索具体业务节点，不进入全局枚举</td><td>生成退款计划、读取 order_snapshot</td></tr>
+    <tr><td><b>故障类型</b></td><td>描述“出了什么问题”，与步骤类型独立</td><td>状态过期、契约异常、工具调用异常、检索质量异常</td></tr>
+  </table></div>
 </section>
 
 <!-- ================= 任务 2 ================= -->
 <section class="panel" data-tab="页面设计稿" data-num="02">
   <div class="crumb">任务 2 / 14</div>
-  <h2>Demo 输出:8 个主页面 + 正常 Trace 详情</h2>
+  <h2>Demo 输出：5 个主导航覆盖的页面 + 3 个事故详情子视图</h2>
   <p class="intro">每个页面都规定了「第一眼要素」——打开页面 3 秒内必须看到的结论性信息,落实「结论先行」的设计原则。以下每张卡对应一份设计稿,也对应可点击原型中的一个页面。</p>
   <div class="grid2">
         <div class="card">
       <b>⓪ 运行记录与正常 Trace 详情</b><span class="pill blue" style="margin-left:8px">新增</span>
       <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>确认正常与异常执行都已采集,并允许下钻正常 Trace。</p>
-      <p class="muted small"><b class="muted">第一眼:</b>运行量、成功率、P95 耗时、事故数以及混合状态列表。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>运行量、成功率、P95 耗时、事故数，以及按 Agent / 运行名称标识的混合状态列表。</p>
       <p class="muted small"><b class="muted">主操作:</b>成功 Trace 打开详情;失败 Trace 进入事故;正常 Trace 可设为 Diff 基线。</p>
     </div>
 <div class="card">
       <b>① 事故列表</b><span class="pill blue" style="margin-left:8px">落地页</span>
       <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>值班第一屏回答「今天最该先处理哪类失败」。</p>
       <p class="muted small"><b class="muted">第一眼:</b>最严重的失败堆(红色计数 + 趋势箭头)及其最可信的诊断摘要。</p>
-      <p class="muted small"><b class="muted">主操作:</b>点击事故行进入工作台;点堆卡则筛选列表(可用性走查后改的,见任务 10)。</p>
+      <p class="muted small"><b class="muted">主操作:</b>按故障类型、通用步骤类型或业务步骤名称筛选；点击事故行进入工作台，点堆卡定位同类事故。</p>
     </div>
     <div class="card">
       <b>② 诊断工作台</b><span class="pill blue" style="margin-left:8px">核心页</span>
       <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>一屏回答「哪一步先出的错、证据是什么、下一步怎么验证」。</p>
-      <p class="muted small"><b class="muted">第一眼:</b>报错位置 + 排名第一的候选原因(一句话结论 + 可信度,默认展开)。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>报错位置 + 排名第一的候选原因（一句话结论 + 证据等级，默认展开）。</p>
       <p class="muted small"><b class="muted">主操作:</b>展开候选 → 阅读证据 → 进入复核。完整执行记录默认折叠,按需展开。</p>
     </div>
     <div class="card">
       <b>③ 成功 / 失败对比</b>
       <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>回答「和正常的那次差在哪」,差异直接关联到证据。</p>
-      <p class="muted small"><b class="muted">第一眼:</b>对比对象怎么选的(同版本 / 同任务 / 时间接近)+ 三个维度各有几处差异。</p>
+      <p class="muted small"><b class="muted">第一眼:</b>对比对象怎么选的(同版本 / 同运行名称 / 时间接近)+ 三个维度各有几处差异。</p>
       <p class="muted small"><b class="muted">主操作:</b>确认差异后进入复核;可手动更换对比对象。</p>
     </div>
     <div class="card">
@@ -440,7 +471,7 @@
     </div>
     <div class="card" style="grid-column: 1 / -1;">
       <b>⑦ 设置</b>
-      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>项目隔离、角色权限(查看者 / 分析师 / 复核人三档)、隐私脱敏、告警规则、门禁模式集中管理。<b class="muted">第一眼:</b>成员角色表——谁有权复核一目了然。第一期不做的功能显示禁用态并注明,不假装可用。</p>
+      <p class="muted small" style="margin:8px 0"><b class="muted">页面目标:</b>项目隔离、角色权限(查看者 / 分析师 / 复核人三档)、隐私脱敏、告警规则、门禁模式集中管理。<b class="muted">第一眼:</b>成员角色表——谁有权复核一目了然。未纳入本期范围的功能不显示占位入口。</p>
     </div>
   </div>
 </section>
@@ -459,7 +490,7 @@
   <h3>解决什么问题</h3>
   <div class="callout">为【运行单 Agent 生产系统的平台团队与运维】在【生产事故排查】情境下,解决【报错位置不等于出错位置、证据散落难以定位】的问题,通过【首故障点定位 + 证据化诊断 + 成功失败对比 + 复核闭环】实现【修复更快、同类问题不复发、修复可验证】。</div>
 
-  <h3>三个可衡量的价值指标</h3>
+  <h3>三个待验证的目标指标</h3>
   <div class="grid3">
     <div class="card stat"><div class="num">≥70<small>%</small></div><h4>定位命中率</h4><p>真正的病根出现在系统给出的前三个候选里</p></div>
     <div class="card stat"><div class="num">≥60<small>%</small></div><h4>证据接受率</h4><p>用户确认是根因的比例</p></div>
@@ -500,17 +531,17 @@
 
   <div class="tblwrap"><table>
     <tr><th>模块</th><th>优先级</th><th>一句话职责</th><th>关键边界(明确不做)</th><th>代表验收标准</th></tr>
-    <tr><td><b>M1 接入与采集体检</b></td><td><span class="pill err">P0</span></td><td>数据进得来,且知道数据可不可信</td><td>不做通用监控;第一期只支持 3 个主流框架;隐私扫描只提示不自动删改</td><td>接入后 5 分钟内出体检报告;人为制造问题能被检出</td></tr>
-    <tr><td><b>M2A 运行记录与 Trace 详情</b></td><td><span class="pill err">P0</span></td><td>正常与异常执行都可查、可下钻</td><td>不扩展为通用 APM;正常 Trace 不触发诊断</td><td>状态筛选准确;正常详情不出现诊断区;可设为 Diff 基线</td></tr>
-    <tr><td><b>M2 事故列表与失败归堆</b></td><td><span class="pill err">P0</span></td><td>从海量执行里知道先看哪个</td><td>不做自定义数据分析(那是报表工具的事)</td><td>同类失败归到同一堆的比例 ≥ 80%;万条数据下首屏 ≤ 2 秒</td></tr>
-    <tr><td><b>M3 因果诊断工作台</b></td><td><span class="pill err">P0</span></td><td>回答「哪一步先出的错、为什么」</td><td>不自动修复、不自动定责;可信度低于四成的降级为「线索」;候选最多 3 条</td><td>前三命中率 ≥ 70%;每条结论 100% 带可点击证据</td></tr>
+    <tr><td><b>M1 接入与采集体检</b></td><td><span class="pill err">P0</span></td><td>数据进得来,且知道数据可不可信</td><td>不做通用监控;第一期只支持 3 个主流框架;采集端按策略脱敏，服务端二次扫描并隔离未授权载荷</td><td>接入后 5 分钟内出体检报告;人为制造问题能被检出</td></tr>
+    <tr><td><b>M2A 运行记录与 Trace 详情</b></td><td><span class="pill err">P0</span></td><td>按 Agent / 运行名称查看正常与异常执行</td><td>业务运行名称不充当步骤分类;正常 Trace 不触发诊断</td><td>组合筛选准确;正常详情不出现诊断区;可设为 Diff 基线</td></tr>
+    <tr><td><b>M2 事故列表与失败归堆</b></td><td><span class="pill err">P0</span></td><td>从海量执行里知道先看哪个</td><td>故障类型、步骤类型、步骤名称保持独立;不做自定义报表</td><td>跨业务步骤类型筛选准确;同类失败归堆比例 ≥ 80%</td></tr>
+    <tr><td><b>M3 因果诊断工作台</b></td><td><span class="pill err">P0</span></td><td>回答「哪一步先出的错、为什么」</td><td>不自动修复、不自动定责;证据不足的候选降级为「线索」;候选最多 3 条</td><td>前三命中率 ≥ 70%;每条结论 100% 带可点击证据</td></tr>
     <tr><td><b>M4 成功 / 失败对比</b></td><td><span class="pill err">P0</span></td><td>回答「和正常的差在哪」</td><td>找不到可比对象时明说并允许跳过,不硬凑;超大字段只比摘要</td><td>自动推荐的对比对象采用率 ≥ 80%;已知差异 100% 检出</td></tr>
     <tr><td><b>M5 诊断复核</b></td><td><span class="pill err">P0</span></td><td>人拍板,AI 被校准</td><td>复核不可跳过;仅「复核人」角色可复核</td><td>反面证据区 100% 有内容(找不到反证就明说);重新复核保留历史</td></tr>
     <tr><td><b>M6 回归用例与发布门禁</b></td><td><span class="pill warn">P1</span></td><td>已确认的问题沉淀为防线</td><td>不做完整发布系统,只提供命令行与推送接口;回放用录制数据,不真实调用外部系统</td><td>转用例 ≤ 2 步且字段自动填充;注入已知问题门禁能报警</td></tr>
     <tr><td><b>M7 设置与权限</b></td><td><span class="pill warn">P1</span></td><td>项目隔离、谁能复核、隐私脱敏</td><td>第一期不做企业单点登录与审计导出</td><td>三档角色权限逐条验证;脱敏后原文不落库</td></tr>
   </table></div>
 
-  <div class="callout">每个模块的完整用户故事、输入输出与全部验收标准见原文档任务 5 章节;此处为通俗摘要。</div>
+  <div class="callout">每个模块的完整用户故事、输入输出与验收标准见 <a href="../docs/05-产品需求文档.md">任务 5：PRD</a>。</div>
 </section>
 
 <!-- ================= 任务 6 ================= -->
@@ -533,7 +564,7 @@
   <div class="tblwrap"><table>
     <tr><th>异常</th><th>系统怎么办</th><th>用户看到什么</th></tr>
     <tr><td><b>找不到候选原因</b></td><td>不编造结论,展示相似历史事故及其当年的复核供参考</td><td>「暂未定位到候选根因。以下是 3 条相似历史事故与其复核结论」</td></tr>
-    <tr><td><b>把握都不大</b>(可信度全部低于四成)</td><td>降级为「线索」并折叠,不允许进复核</td><td>「以下为低置信度线索,仅供参考,不建议直接采信」</td></tr>
+    <tr><td><b>把握都不大</b>（候选均为证据不足）</td><td>降级为「线索」并折叠,不允许进复核</td><td>「以下线索证据不足，仅供参考，不建议直接采信」</td></tr>
     <tr><td><b>证据互相矛盾</b></td><td>标记「证据冲突」,强制人工复核,矛盾证据置顶并排</td><td>「该候选存在相互矛盾的强证据,请人工复核」</td></tr>
     <tr><td><b>AI 分析超时</b></td><td>确定性判定照常显示,页面不干等,提供重试</td><td>「语义分析暂不可用(已重试 2 次),确定性判定不受影响。重试 →」</td></tr>
     <tr><td><b>找不到可比的成功执行</b></td><td>明说没有,允许放宽条件手选或跳过,不硬凑</td><td>「未找到满足条件的可比成功链。可放宽条件手动选择,或跳过对比」</td></tr>
@@ -553,30 +584,31 @@
 <section class="panel" data-tab="可点击原型" data-num="07">
   <div class="crumb">任务 7 / 14</div>
   <h2>可点击原型</h2>
-  <p class="intro">原型文件 <b>agent-tracing-prototype.html</b>:单文件、离线双击可开、真实可点。当前版本 v1.6,已包含可用性走查后的迭代、全部微交互动效,并将配色重构为主流平台风格。</p>
+  <p class="intro">原型文件 <b>../prototype/index.html</b>:单文件、离线双击可开、真实可点。当前版本 v1.8，采用主流工程后台风格，主流程可交互，并包含完整状态反馈。</p>
+  <p><a class="pill blue" href="../prototype/index.html">打开交互原型 →</a></p>
+  <div class="callout"><b>离线交付：</b>压缩时保留 <code>prototype/</code>、<code>design/</code> 与 <code>docs/</code> 的相对目录；解压后先打开本总览，再通过上方链接进入唯一一份原型。</div>
 
-  <h3>演示用模拟案例</h3>
+  <h3>业务场景</h3>
   <div class="card prose" style="max-width: 56em;">
     <p>「订单助手」是一个多步骤执行的客服 Agent,一次任务依次经过五个环节:<b>规划 → 查订单 → 查资料 / 记忆 → 执行退款 → 发通知</b>。</p>
     <p>核心事故:用户申请退款 ¥180,退款环节(第 9 步)调用接口被拒。<b>表面报错</b>在第 9 步;<b>真实根因</b>在第 3 步——「查资料」这一步读到了一份 <b>4 小时前的过期快照</b>(写着可退 ¥180),而订单真实状态是已部分退款、只剩 ¥60 可退。过期数据沿着后续步骤一路传递,最终导致超额退款请求被拒。</p>
   </div>
 
-  <h3>演示路径(原型顶部有同款引导,步骤编号可点击直达)</h3>
+  <h3>业务操作路径</h3>
   <ol class="demo">
     <li><b>运行记录</b>:切换成功 / 失败筛选 → 打开正常 Trace TRC-9f21 → 查看完整步骤并设为对比基线;</li>
     <li><b>事故列表</b>:点「过期状态污染」堆卡筛选定位 → 点开事故 INC-2026-0814-003;</li>
-    <li><b>诊断工作台</b>:先看到规则判定的候选与「语义分析中」加载态(约 1 秒后 AI 候选渐入,演示「规则先行、模型异步」)→ 展开证据,点击证据跳回原始记录(持久高亮);</li>
+    <li><b>诊断工作台</b>:先看到规则判定的候选与「语义分析中」加载态(约 1 秒后 AI 候选渐入,呈现“规则先行、模型异步”)→ 展开证据,点击证据跳回原始记录(持久高亮);</li>
     <li><b>成功 / 失败对比</b>:与一次成功执行做三维差异对比;</li>
     <li><b>诊断复核</b>:支持证据 4 条证据 vs 反面证据 2 条反证 → 确认是根因(落定动效);</li>
     <li><b>转检查项</b>:自动生成 REG-1041(含期望规则,新行高亮滑入)→ 门禁页看运行结果;</li>
     <li><b>接入体检</b>:覆盖率 / 断链 / 重复 / 隐私四项报告。</li>
   </ol>
 
-  <h3>异常状态也做进了原型</h3>
+  <h3>异常状态</h3>
   <ul class="tick">
     <li><b>断链警告</b>:体检页展示断链位置与修复指引;</li>
-    <li><b>低可信线索</b>:工作台候选 3 折叠为「线索」,复核入口禁用;</li>
-    <li><b>权限不足</b>:设置页「邀请成员」显示禁用态并注明原因;</li>
+    <li><b>证据不足线索</b>:工作台候选 3 折叠为「线索」,复核入口禁用;</li>
     <li><b>快照过期提示</b>:门禁页 REG-1015 标注录制时间过久。</li>
   </ul>
   <p class="muted small">原则:不可用的功能一律显示禁用态并注明原因,不假装可点。</p>
@@ -587,6 +619,11 @@
   <div class="crumb">任务 8 / 14</div>
   <h2>技术方案草图</h2>
   <p class="intro">承接第一周推荐架构,细化到接口与字段。这里给通俗版:数据像流水一样经过四段处理,最后到达用户界面。</p>
+
+  <figure class="diagram-figure">
+    <img src="xunji-technical-architecture.png" alt="寻迹四阶段技术架构：采集端、接入与存储、诊断引擎、应用层，并由复核结果回流校准" loading="lazy">
+    <figcaption>四阶段架构：采集端完成适配与脱敏，经网关和双存储进入诊断引擎，再由运行记录、诊断工作台、复核和门禁承接；复核结果回流校准。</figcaption>
+  </figure>
 
   <h3>数据流四段</h3>
   <div class="flow">
@@ -604,14 +641,14 @@
     <tr><th></th><th>规则 / 不变量引擎</th><th>AI 轨迹评估模型</th></tr>
     <tr><td><b>什么时候跑</b></td><td>先跑,毫秒级,结果立即上屏</td><td>后跑,秒级,异步追加,超时不阻塞页面</td></tr>
     <tr><td><b>管什么问题</b></td><td>确定性问题:格式校验、必填字段、数据过期、数值约束</td><td>语义问题:候选排序、替代解释、反证搜集、「答案看着对但业务上错了」</td></tr>
-    <tr><td><b>输出标签</b></td><td><span class="pill ok">规则判定</span> 可信度按规则强度给固定值</td><td><span class="pill purple">模型推断</span> 必须附结构化证据引用,否则丢弃</td></tr>
+    <tr><td><b>输出标签</b></td><td><span class="pill ok">规则判定</span> 内部评分只用于排序与离线校准</td><td><span class="pill purple">模型推断</span> 必须附结构化证据引用,否则丢弃</td></tr>
   </table></div>
   <p class="muted small" style="max-width:48em">调用时序:事故创建 → 因果图构建(1 秒内)→ 规则引擎先返回并渲染页面 → AI 分析异步追加 → 用户复核 → 复核写入校准日志 → 每周用复核数据校准规则阈值与模型参数。</p>
 
   <h3>接口与数据结构 <small>面向工程实现,通俗版只列清单</small></h3>
   <div class="grid2">
-    <div class="card"><b>10 个核心接口</b><p class="muted small" style="margin-top:6px">数据接入、体检报告、运行记录、Trace 详情、事故列表、诊断结果、成功失败对比、提交复核(含并发冲突处理)、转检查项、门禁运行。完整请求 / 响应字段见原文档 8.2 节。</p></div>
-    <div class="card"><b>两套存储</b><p class="muted small" style="margin-top:6px">观测数据(执行记录、状态 / 传参 / 记忆事件)存分析型数据库 ClickHouse;业务数据(事故、诊断、复核、检查项)存 Postgres。字段级定义见原文档 8.3 节。关键设计:<b>证据表的「原始记录引用」为必填——没有引用的证据存不进去</b>。</p></div>
+    <div class="card"><b>10 个核心接口</b><p class="muted small" style="margin-top:6px">数据接入、体检报告、运行记录、Trace 详情、事故列表、诊断结果、成功失败对比、提交复核(含并发冲突处理)、转检查项、门禁运行。完整请求与响应字段见 <a href="../docs/08-技术方案.md">任务 8：技术方案</a>。</p></div>
+    <div class="card"><b>两套存储</b><p class="muted small" style="margin-top:6px">观测数据(执行记录、状态 / 传参 / 记忆事件)存分析型数据库 ClickHouse;业务数据(事故、诊断、复核、检查项)存 Postgres。字段级定义见 <a href="../docs/08-技术方案.md">任务 8：技术方案</a>。关键设计:<b>证据表的「原始记录引用」为必填——没有引用的证据存不进去</b>。</p></div>
   </div>
 </section>
 
@@ -637,36 +674,35 @@
     <tr><td>TC-26</td><td>直接用网址访问无权限项目的事故</td><td>拒绝访问,且不泄露该事故是否存在</td><td><span class="pill err">P0</span></td></tr>
     <tr><td>TQ-01</td><td>诊断质量跑批:30–50 条已知病根的事故集</td><td>前三命中率 ≥ 70%,第一名命中率 ≥ 45%</td><td><span class="pill err">P0</span></td></tr>
     <tr><td>TQ-02</td><td>证据引用完整性:遍历全部上屏结论</td><td>100% 有可点击的真实引用</td><td><span class="pill err">P0</span></td></tr>
-    <tr><td>TQ-03</td><td>可信度是否「言行一致」</td><td>标高可信的候选,实际确认根因率也显著更高</td><td><span class="pill warn">P1</span></td></tr>
+    <tr><td>TQ-03</td><td>证据等级是否可校准</td><td>等级间确认率单调，且记录校准版本</td><td><span class="pill warn">P1</span></td></tr>
   </table></div>
 </section>
 
 <!-- ================= 任务 10 ================= -->
-<section class="panel" data-tab="可用性测试" data-num="10">
+<section class="panel" data-tab="设计评审" data-num="10">
   <div class="crumb">任务 10 / 14</div>
-  <h2>可用性测试:3 种画像走查与迭代</h2>
-  <div class="callout warn"><b>方法诚实声明:</b>本轮是「3 种用户画像的专家认知走查」,不是真人实测——本期条件下无法招募外部受测者。局限(走查者非真实用户、无真实耗时数据)明确记录,真人实测已列入第三周计划。</div>
+  <h2>项目评审与用户验证</h2>
 
-  <h3>三个走查视角 × 五个任务</h3>
+  <h3>真实反馈集中的三个方面</h3>
   <div class="grid3">
-    <div class="card"><b>走查 A · Agent 开发者</b><p class="muted small" style="margin-top:6px">维护订单助手 Agent,日常改提示词和工具编排。关注:证据能不能核实、复核是否可靠。</p></div>
-    <div class="card"><b>走查 B · 值班运维</b><p class="muted small" style="margin-top:6px">管多个业务的告警,第一次用本产品。关注:最快找到该先处理什么、操作不迷路。</p></div>
-    <div class="card"><b>走查 C · 测试工程师</b><p class="muted small" style="margin-top:6px">负责发布质量。关注:转用例是否省事、门禁结果可不可操作。</p></div>
+    <div class="card"><b>术语与心智模型</b><p class="muted small" style="margin-top:6px">去掉角色扮演式术语，明确运行记录、事故和复核的关系。</p></div>
+    <div class="card"><b>状态与分类</b><p class="muted small" style="margin-top:6px">分开执行状态、质量结论、事故状态，并拆分技术类型与业务节点。</p></div>
+    <div class="card"><b>布局与交付</b><p class="muted small" style="margin-top:6px">修复列表宽度，明确总览与唯一交互原型的关系。</p></div>
   </div>
-  <p class="muted small" style="margin-top:10px">五个任务覆盖三步闭环 + 两个异常态:找首故障点、验证证据跳转、走通复核转用例、判断数据可信度、解释低可信线索为何禁用。</p>
 
-  <h3>发现 7 个问题,当期修复 4 个</h3>
+  <h3>R01 项目评审反馈与处理</h3>
+  <p class="muted small">记录日期：2026-08-19。完整原始反馈见 <a href="../research/R01-项目评审反馈.md">项目评审反馈记录</a>。</p>
   <div class="tblwrap"><table>
-    <tr><th>#</th><th>问题</th><th>严重度</th><th>处理</th></tr>
-    <tr><td>P-1</td><td>堆卡片点击直接跳转工作台,与「筛选」的预期不符(2 人遇到)</td><td><span class="pill err">严重</span></td><td><span class="pill ok">已修复</span> 改为筛选 + 滚动定位;进入工作台收敛为点事故行</td></tr>
-    <tr><td>P-2</td><td>证据跳转的高亮 1.6 秒后消失,回看时找不到定位行</td><td><span class="pill warn">一般</span></td><td><span class="pill ok">已修复</span> 改为持久高亮(像划重点),到下一次定位才转移</td></tr>
-    <tr><td>P-3</td><td>门禁「建议升级为阻断」没有操作入口</td><td><span class="pill warn">一般</span></td><td><span class="pill ok">已修复</span> 明细行内直接加「调整门禁模式 →」链接</td></tr>
-    <tr><td>P-4</td><td>可信度百分比诱发「不看反证直接采信」</td><td><span class="pill err">严重</span></td><td><span class="pill blue">本期不改</span> 复核强制并排反证已是首层防线;改成「高中低」三档影响面大,留待真人实测定夺</td></tr>
-    <tr><td>P-5</td><td>复核按钮没有二次确认,怕手滑</td><td><span class="pill blue">建议</span></td><td><span class="pill blue">不改</span> 重新复核机制已兜底;二次确认会降低复核量,伤校准</td></tr>
-    <tr><td>P-6</td><td>「暂需补充证据」生成的待补清单提交后无处回看</td><td><span class="pill warn">一般</span></td><td><span class="pill blue">本期不改</span> 需新增持久化页面,记入后续需求</td></tr>
-    <tr><td>P-7</td><td>引导文字长,关掉后不知道下一步去哪</td><td><span class="pill warn">一般</span></td><td><span class="pill ok">部分修复</span> 引导步骤编号改为可点击直达</td></tr>
+    <tr><th>#</th><th>发现</th><th>处理</th></tr>
+    <tr><td>F-01</td><td>“根因庭审、法官裁决”不符合工程工具语气</td><td><span class="pill ok">已修复</span> 改为诊断复核和三个直接动作</td></tr>
+    <tr><td>F-03</td><td>正常 Trace 是否显示不清楚</td><td><span class="pill ok">已修复</span> 新增运行记录与正常详情，拆分三类状态</td></tr>
+    <tr><td>F-04</td><td>步骤分类看起来像退款业务专用</td><td><span class="pill ok">已修复</span> 拆分原始类型、归一类型、步骤名称与故障类型</td></tr>
+    <tr><td>F-05</td><td>总览与交互原型被理解成两套原型</td><td><span class="pill ok">已修复</span> 明确只有一份交互原型</td></tr>
+    <tr><td>F-07</td><td>三个列表页的数据行右侧留白</td><td><span class="pill ok">已修复</span> 恢复标准表格布局，窄屏才横向滚动</td></tr>
   </table></div>
-  <p class="muted small" style="max-width:48em">走查者原话:「证据能点进去这点比我们现在的工具强,但跳过去之后得让我找得到回来的路。」「86% 摆在那我就不想看反方了——这数字劝人偷懒。」「让我升级阻断就给我个按钮,别让我自己去翻设置。」</p>
+
+  <h3>第三周验证</h3>
+  <p class="muted small" style="max-width:52em">计划招募 3 名目标用户，统一执行找首故障点、证据回跳、复核转用例、判断数据可信度和解释证据不足五个任务；记录真实完成率、耗时、求助次数与错误路径，再决定是否继续调整导航和证据等级。</p>
 </section>
 
 <!-- ================= 任务 11 ================= -->
@@ -677,7 +713,7 @@
 
   <h3>品牌语气</h3>
   <div class="callout">像一位可靠的资深工程师：<b>不夸张、不卖萌、每句话可验证。</b>成功文案说明系统完成了什么；错误文案给出恢复路径；空状态提供下一步操作。</div>
-  <p class="prose" style="max-width:48em">视觉方向调整为「标准后台基线 + 诊断信息增强」(原型 v1.6)：浅灰背景、白色卡片、左侧导航和品牌蓝主操作保持行业熟悉感；标题与正文统一使用无衬线字体。差异化只体现在首故障点、证据回跳、双向证据对照等关键任务上，不再使用叙事性主题元素或公文式字体。</p>
+  <p class="prose" style="max-width:48em">视觉方向调整为「标准后台基线 + 诊断信息增强」（原型 v1.8）：浅灰背景、白色卡片、左侧导航和品牌蓝主操作保持行业熟悉感；标题与正文统一使用无衬线字体。差异化只体现在首故障点、证据回跳、双向证据对照等关键任务上，不再使用叙事性主题元素或公文式字体。</p>
 
   <h3>色彩语义</h3>
   <div class="tblwrap"><table>
@@ -766,7 +802,7 @@
     <div class="case">
       <span><b>候选原因 1</b> · 资料快照过期</span>
       <span class="pill ok">规则判定</span>
-      <span class="muted small">可信度 86%</span>
+      <span class="muted small">证据充分</span>
     </div>
     <div class="review-cols">
       <div class="review-col pros">
@@ -799,7 +835,7 @@
   <ul class="tick">
     <li><b>证据优先：</b>支持和反面信息都必须能回到原始记录，不接受只有文字总结的结论；</li>
     <li><b>结论清晰：</b>使用「确认是根因 / 排除该原因 / 暂需补充证据」三个直接动作，不让用户理解角色隐喻；</li>
-    <li><b>置信度降级：</b>百分比是次要信息，原始证据和差异对比排在前面；低置信候选只作为线索；</li>
+    <li><b>证据等级：</b>对外只展示「证据充分 / 有一定依据 / 证据不足」，原始证据和差异对比排在前面；证据不足只作为线索；</li>
     <li><b>反馈可用：</b>排除需要结构化理由，证据不足生成补采清单，复核结果用于校准但不自动替代工程判断。</li>
   </ul>
 
@@ -809,7 +845,7 @@
 
   <h3>附：本期未决问题与第三周验证项</h3>
   <div class="grid2">
-    <div class="card"><b>未决问题（6 项）</b><p class="muted small" style="margin-top:6px">反面证据质量、失败归堆效果、回放保真度、可信度展示方式、待补清单入口与计费模式仍需真实数据验证。</p></div>
+    <div class="card"><b>未决问题（6 项）</b><p class="muted small" style="margin-top:6px">反面证据质量、失败归堆效果、回放保真度、证据等级阈值、待补清单入口、多 Agent 扩展与计费模式仍需真实数据验证。</p></div>
     <div class="card"><b>第三周验证项（4 项）</b><p class="muted small" style="margin-top:6px">已知根因记录跑批、3–5 名真实用户测试、LangGraph 采集稳定性验证，以及 2 个开源 Agent 项目的接入体检。</p></div>
   </div>
 </section>

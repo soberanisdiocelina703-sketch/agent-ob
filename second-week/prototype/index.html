@@ -3,235 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>寻迹 · Agent 链路诊断原型</title>
-<style>
-  :root{
-    /* 主流平台配色：浅灰白底 + 石板灰文字 + 标准蓝品牌色，语义色克制 */
-    --bg:#f6f8fa; --panel:#ffffff; --line:#e2e8f0; --line2:#cbd5e1;
-    --ink:#0f172a; --ink2:#334155; --muted:#64748b;
-    --brand:#2563eb; --brand2:#1d4ed8; --brand-bg:#eff6ff;
-    --ok:#16a34a; --ok-bg:#dcfce7;
-    --warn:#b45309; --warn-bg:#fef3c7;
-    --bad:#dc2626; --bad-bg:#fee2e2;
-    --rule:#0d9488; --rule-bg:#ccfbf1;
-    --model:#7c3aed; --model-bg:#ede9fe;
-
-    --sidebar:#ffffff; --sidebar-ink:#334155;
-    --shadow:0 1px 3px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.05);
-    --r:10px;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
-  /* ===== layout ===== */
-  .app{display:flex;min-height:100vh}
-  .sidebar{width:216px;background:var(--sidebar);color:var(--sidebar-ink);border-right:1px solid var(--line);flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-  .logo{padding:20px 18px 14px;border-bottom:1px solid var(--line)}
-  .logo b{color:var(--ink);font-size:17px;letter-spacing:.5px}
-  .logo span{display:block;font-size:11px;color:#64748b;margin-top:3px}
-  .nav{padding:10px 8px;flex:1}
-  .nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--sidebar-ink);text-decoration:none;font-size:13.5px;margin-bottom:2px;cursor:pointer}
-  .nav a:hover{background:#f1f5f9;color:var(--ink)}
-  .nav a.active{background:#eff6ff;color:var(--brand);font-weight:600}
-  .nav .ico{width:18px;text-align:center;font-size:15px}
-  .sb-foot{padding:12px 16px;border-top:1px solid var(--line);font-size:11.5px;color:#64748b}
-  .main{flex:1;min-width:0;padding:0 28px 60px}
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);margin-bottom:20px}
-  .crumb{font-size:13px;color:var(--muted)}
-  .crumb b{color:var(--ink);font-size:16px;display:block;margin-top:2px}
-  .userchip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
-  .avatar{width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
-  /* ===== guide banner ===== */
-  .guide{background:#fff;color:#475569;border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;box-shadow:var(--shadow)}
-  .guide .gi{font-size:20px}
-  .guide b{color:var(--ink)}
-  .guide .steps{margin-top:6px;font-size:12.5px;line-height:1.9;color:#475569}
-  .guide .steps em{font-style:normal;background:#eff6ff;border-radius:4px;padding:1px 7px;color:var(--brand);font-weight:600;margin-right:2px}
-  .guide .close{margin-left:auto;cursor:pointer;color:#94a3b8;font-size:16px;padding:2px 6px}
-  /* ===== cards & common ===== */
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-  .card .hd{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-  .card .hd b{font-size:14.5px}
-  .card .bd{padding:16px 18px}
-  .grid{display:grid;gap:16px}
-  .g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
-  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;vertical-align:middle}
-  .t-rule{background:var(--rule-bg);color:var(--rule)} .t-model{background:var(--model-bg);color:var(--model)}
-  .t-ok{background:var(--ok-bg);color:var(--ok)} .t-warn{background:var(--warn-bg);color:var(--warn)} .t-bad{background:var(--bad-bg);color:var(--bad)}
-  .t-brand{background:var(--brand-bg);color:var(--brand)} .t-gray{background:#e2e8f0;color:var(--muted)}
-  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:#fff;color:var(--ink);border-radius:8px;padding:8px 16px;font-size:13.5px;cursor:pointer;font-family:inherit}
-  .btn:hover{border-color:var(--brand);color:var(--brand)}
-  .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
-  .btn.pri:hover{background:var(--brand2)}
-  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
-  .btn.bad{background:#fff;border-color:#fca5a5;color:var(--bad)}
-  .btn.bad:hover{background:var(--bad-bg)}
-  .btn:disabled,.btn.disabled{opacity:.45;cursor:not-allowed;pointer-events:auto}
-  .btn.disabled:hover{border-color:var(--line2);color:var(--ink)}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;padding:8px 12px;border-bottom:1px solid var(--line);background:#f8fafc;white-space:nowrap}
-  td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-  tr.click{cursor:pointer} tr.click:hover td{background:var(--brand-bg)}
-  .mono{font-family:Consolas,"Courier New",monospace;font-size:12.5px}
-  .muted{color:var(--muted)} .small{font-size:12px}
-  .pill-link{color:var(--brand);cursor:pointer;text-decoration:underline dotted}
-  /* confidence bar */
-  .conf{display:flex;align-items:center;gap:8px}
-  .conf .bar{width:90px;height:6px;background:#e2e8f0;border-radius:4px;overflow:hidden}
-  .conf .fill{height:100%;border-radius:4px}
-
-  /* ===== runs & trace detail ===== */
-  .run-summary .metric{font-size:26px;font-weight:750;line-height:1.2;margin:4px 0}
-  .run-status{display:inline-flex;align-items:center;gap:6px;font-weight:600}
-  .run-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#94a3b8}
-  .run-status.success{color:var(--ok)} .run-status.success::before{background:var(--ok)}
-  .run-status.failed{color:var(--bad)} .run-status.failed::before{background:var(--bad)}
-  .run-row.hidden{display:none}
-  .run-empty{display:none;padding:26px;text-align:center;color:var(--muted)}
-  .trace-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
-  .trace-hero h2{font-size:20px;margin-bottom:4px}
-  .trace-facts{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:14px}
-  .trace-facts>div{padding:12px 16px;border-right:1px solid var(--line)}
-  .trace-facts>div:last-child{border-right:none}
-  .trace-facts .k{font-size:11.5px;color:var(--muted);margin-bottom:3px}
-  .trace-facts .v{font-weight:650}
-  .success-note{background:var(--ok-bg);border:1px solid #bbf7d0;border-radius:var(--r);padding:12px 14px;color:#166534;display:flex;gap:10px;align-items:flex-start}
-
-  /* ===== incidents page ===== */
-  .cluster{cursor:pointer;position:relative;transition:transform .1s}
-  .cluster:hover{transform:translateY(-2px);border-color:var(--brand)}
-  .cluster .cnt{font-size:26px;font-weight:800}
-  .cluster .trend{font-size:11.5px}
-  .cluster.selected{border:2px solid var(--brand)}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-  .filters select{border:1px solid var(--line2);border-radius:8px;padding:6px 10px;font-size:12.5px;background:#fff;color:var(--ink);font-family:inherit}
-  /* ===== workbench ===== */
-  .symp{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0}
-  .symp>div{padding:14px 18px;border-right:1px solid var(--line)}
-  .symp>div:last-child{border-right:none}
-  .symp .k{font-size:11.5px;color:var(--muted);margin-bottom:4px}
-  .symp .v{font-size:15px;font-weight:700}
-  .cand{border:1px solid var(--line);border-radius:var(--r);margin-bottom:12px;overflow:hidden;background:#fff}
-  .cand .row{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer}
-  .cand .row:hover{background:#f8fafc}
-  .cand .rank{width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
-  .cand.top{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
-  .cand .body{border-top:1px solid var(--line);background:#f8fafc;padding:14px 16px;display:none}
-  .cand.open .body{display:block}
-  .cand.lead .rank{background:#94a3b8}
-  .evi{border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
-  .evi .ei{font-size:15px;margin-top:1px}
-  .evi .ref{font-size:11.5px;color:var(--brand);cursor:pointer;margin-top:4px;display:inline-block}
-  .evi.counter{border-left:3px solid var(--warn)}
-  .evi.support{border-left:3px solid var(--rule)}
-  /* causal path */
-  .cpath{display:flex;align-items:center;gap:0;overflow-x:auto;padding:8px 2px}
-  .cnode{min-width:118px;border:1.5px solid var(--line2);border-radius:8px;padding:8px 10px;background:#fff;text-align:center;cursor:pointer;flex-shrink:0}
-  .cnode:hover{border-color:var(--brand)}
-  .cnode .nm{font-weight:700;font-size:12.5px}
-  .cnode .tp{font-size:10.5px;color:var(--muted)}
-  .cnode.fault{border-color:var(--warn);background:var(--warn-bg)}
-  .cnode.err{border-color:var(--bad);background:var(--bad-bg)}
-  .carrow{color:#94a3b8;padding:0 6px;font-size:16px;flex-shrink:0}
-  /* trace tree */
-  .ttree{font-size:12.5px}
-  .trow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;cursor:pointer}
-  .trow:hover{background:var(--brand-bg)}
-  .trow .ind{color:#cbd5e1}
-  .trow .kind{width:64px;text-align:center}
-  .trow .dur{margin-left:auto;color:var(--muted);font-size:11.5px;white-space:nowrap}
-  .trow.hl{background:var(--warn-bg)} .trow.hlbad{background:var(--bad-bg)}
-  /* ===== diff ===== */
-  .diffwrap{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-  .diffwrap .dh{padding:10px 14px;font-weight:700;font-size:13px;border-bottom:1px solid var(--line)}
-  .diffwrap .dh.fail{background:var(--bad-bg);color:var(--bad)} .diffwrap .dh.pass{background:var(--ok-bg);color:var(--ok)}
-  .drow{padding:8px 14px;border-bottom:1px solid var(--line);font-size:12.5px;display:flex;gap:8px;align-items:baseline}
-  .drow .dk{width:150px;color:var(--muted);flex-shrink:0;font-size:11.5px}
-  .drow.dif{background:#fff8c5}
-  .drow.dif .dv{color:var(--warn);font-weight:700}
-  .drow .ebadge{font-size:10px;background:var(--rule-bg);color:var(--rule);border-radius:3px;padding:1px 5px;margin-left:auto;flex-shrink:0}
-  /* ===== review ===== */
-  .review{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .side-p .hd{background:var(--rule-bg)} .side-d .hd{background:var(--warn-bg)}
-  .reviewbar{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;gap:14px;color:var(--ink);box-shadow:var(--shadow)}
-  .reviewbar b{color:var(--ink)}
-  .vd-done{background:var(--ok-bg);border:1px solid #bbf7d0;color:var(--ok);border-radius:var(--r);padding:14px 18px;margin-top:16px;display:none}
-  /* ===== gate ===== */
-  .gsum{display:flex;gap:24px;align-items:center}
-  .gsum .big{font-size:30px;font-weight:800}
-  .caseNew{background:var(--brand-bg)!important}
-  /* ===== checkup ===== */
-  .chk .score{font-size:26px;font-weight:800}
-  .fixguide{background:#0f172a;color:#cbd5e1;border-radius:8px;padding:12px 14px;font-size:12px;margin-top:10px;display:none}
-  .fixguide.show{display:block}
-  /* ===== modal & toast ===== */
-  .mask{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:50}
-  .mask.show{display:flex}
-  .modal{background:#fff;border-radius:14px;width:520px;max-width:92vw;max-height:86vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-  .modal .mh{padding:16px 20px;border-bottom:1px solid var(--line);font-weight:700;font-size:15px;display:flex;justify-content:space-between}
-  .modal .mh span{cursor:pointer;color:var(--muted)}
-  .modal .mb{padding:18px 20px}
-  .modal .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
-  .fld{margin-bottom:12px}
-  .fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
-  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--ink);background:#fff}
-  .fld textarea{resize:vertical;min-height:56px;line-height:1.6;font-family:Consolas,"Courier New",monospace;font-size:12.5px}
-  .fld .ro{background:#f1f5f9;color:var(--ink2)}
-  .radio{display:flex;flex-direction:column;gap:8px}
-  .radio label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:13px;color:var(--ink)}
-  .radio label:hover{border-color:var(--brand)}
-  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 20px;border-radius:10px;font-size:13.5px;display:none;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.35)}
-  .page{display:none} .page.show{display:block}
-  .mt16{margin-top:16px}.mt10{margin-top:10px}.mb10{margin-bottom:10px}
-  .tip{position:relative}
-  .tip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:7px 11px;border-radius:7px;font-size:11.5px;white-space:nowrap;z-index:30}
-  /* ===== 微交互（任务 11）：时长 150–400ms，克制、不阻塞操作 ===== */
-  .page.show{animation:pageIn .18s ease-out}
-  @keyframes pageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-  .btn{transition:transform .1s ease,background .15s ease,border-color .15s ease,color .15s ease}
-  .btn:active{transform:scale(.97)}
-  .guide{animation:guideIn .3s ease-out}
-  @keyframes guideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-  .guide .steps em{cursor:pointer}
-  .guide .steps em:hover{background:#dbeafe}
-  .modal{animation:modalIn .2s cubic-bezier(.2,.8,.3,1)}
-  @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
-  #toast.in{display:block;animation:toastIn .25s cubic-bezier(.2,.8,.3,1)}
-  @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%)}}
-  /* 复核确认：落定感（轻微上弹后回落）+ 对勾 pop */
-  .vd-done.show{display:block;animation:settle .35s cubic-bezier(.2,.8,.3,1)}
-  @keyframes settle{0%{opacity:0;transform:translateY(10px) scale(.98)}60%{opacity:1;transform:translateY(-2px) scale(1.005)}100%{opacity:1;transform:none}}
-  /* 转用例成功：新行滑入 + 背景闪淡 */
-  .caseNew{animation:rowIn .3s ease-out,rowFlash 1.2s ease-out;background:var(--brand-bg)}
-  @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
-  @keyframes rowFlash{0%{background:#dbeafe}100%{background:var(--brand-bg)}}
-  /* 门禁警告：进入页面时单次脉冲，克制提醒而非警报 */
-  .pulse{animation:pulseOnce .4s ease-out}
-  @keyframes pulseOnce{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
-  /* 诊断加载中：规则结果先行，模型候选异步追加（对应 7.4 时序与异常 G-4） */
-  .diagload{display:flex;gap:10px;align-items:center;padding:10px 14px;border:1px dashed var(--line2);border-radius:8px;margin-bottom:12px;font-size:12.5px;color:var(--ink2);background:#f8fafc}
-  .spinner{width:14px;height:14px;border:2px solid var(--line2);border-top-color:var(--model);border-radius:50%;flex-shrink:0;animation:spin .7s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .cand.fadein{animation:candIn .35s ease-out}
-  @keyframes candIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-  /* ===== 主流工程产品基线 ===== */
-  /* 统一无衬线字体与常规层级，避免主题化造型干扰排障 */
-  .logo b{letter-spacing:.2px}
-  .crumb b{font-size:17px;letter-spacing:0}
-  .card .hd b{font-size:14.5px;letter-spacing:0}
-  .nav{padding:10px 8px}
-  .nav a{border-radius:8px;padding:9px 14px}
-  .nav a.active{background:#eff6ff;color:var(--brand);font-weight:600}
-  .nav a.active:hover{background:#eff6ff;color:var(--brand)}
-  .tag{border-radius:20px}
-  /* 原始事件定位沿用产品通用选中态 */
-  .trow.located{background:var(--brand-bg);box-shadow:inset 3px 0 0 var(--brand)}
-  .trow.flash{animation:spanFlash 1.6s ease-out}
-  @keyframes spanFlash{0%,25%{outline:2px solid var(--brand);outline-offset:-2px}45%{outline:2px solid transparent}65%{outline:2px solid var(--brand);outline-offset:-2px}100%{outline:2px solid transparent}}
-  .status-check{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;font-weight:700;margin-right:6px}
-  /* 键盘可达性 */
-  :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-</style>
+<title>寻迹 · Agent 链路诊断</title>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div class="app">
@@ -239,16 +12,16 @@
   <aside class="sidebar">
     <div class="logo"><b>寻迹</b><span>Agent 链路诊断平台</span></div>
     <nav class="nav" id="nav">
-      <a data-page="runs"><span class="ico">▶</span>运行记录</a>
-      <a data-page="incidents" class="active"><span class="ico">⚠</span>事故列表</a>
-      <a data-page="workbench"><span class="ico">🔍</span>诊断工作台</a>
-      <a data-page="diff"><span class="ico">⇄</span>成功/失败 Diff</a>
-      <a data-page="review"><span class="ico">✓</span>诊断复核</a>
-      <a data-page="gate"><span class="ico">🛡</span>回归集与门禁</a>
-      <a data-page="checkup"><span class="ico">🩺</span>接入体检</a>
-      <a data-page="settings"><span class="ico">⚙</span>设置</a>
+      <a href="#runs" data-page="runs"><span class="ico">▶</span>运行记录</a>
+      <a href="#incidents" data-page="incidents" class="active"><span class="ico">⚠</span>事故列表</a>
+
+
+
+      <a href="#gate" data-page="gate"><span class="ico">🛡</span>回归集与门禁</a>
+      <a href="#checkup" data-page="checkup"><span class="ico">🩺</span>接入体检</a>
+      <a href="#settings" data-page="settings"><span class="ico">⚙</span>设置</a>
     </nav>
-    <div class="sb-foot">原型版本 v1.6 · 标准工程平台风格<br>项目：订单助手（生产）· 演示数据</div>
+    <div class="sb-foot">寻迹 1.8.0<br>订单助手 · 生产环境</div>
   </aside>
 
   <main class="main">
@@ -260,14 +33,14 @@
     <div class="guide" id="guide">
       <div class="gi">🧭</div>
       <div>
-        <b>演示引导 · 三步闭环：发现 → 复核 → 转用例</b>
+        <b>快速排障：发现 → 复核 → 转用例</b>
         <div class="steps">
           <em onclick="go('incidents')">1</em>在「事故列表」点开簇 <b>过期状态污染</b> 下的事故 INC-2026-0814-003 →
           <em onclick="go('workbench')">2</em>在「诊断工作台」查看首故障点、展开证据 →
           <em onclick="go('diff')">3</em>可选：打开「成功/失败 Diff」对比 →
           <em onclick="go('review')">4</em>进入「诊断复核」，对照支持证据、反面证据和其他解释后确认 →
           <em onclick="go('gate')">5</em>确认根因后一键「转回归用例」，在「门禁」页查看结果。
-          可从侧栏「运行记录」查看成功与失败 Trace，并打开正常 Trace 详情或设为对比基线。另有异常演示：候选 3 为低置信度折叠线索；「接入体检」页含断链警告。<span class="small" style="color:#94a3b8">（点击步骤编号可直达对应页面）</span>
+          可从侧栏「运行记录」查看全部 Trace，并打开正常详情或选择对比基线；数据完整度问题统一在「接入体检」查看。<span class="small" style="color:#94a3b8">（点击步骤编号可直达对应页面）</span>
         </div>
       </div>
       <div class="close" onclick="document.getElementById('guide').style.display='none'">✕</div>
@@ -278,50 +51,33 @@
     <section class="page" id="pg-runs">
       <div class="grid g4 run-summary mb10">
         <div class="card bd"><div class="small muted">近 24 小时运行</div><div class="metric">1,284</div><div class="small muted">较昨日 +8.6%</div></div>
-        <div class="card bd"><div class="small muted">成功率</div><div class="metric" style="color:var(--ok)">96.8%</div><div class="small muted">成功 1,243 · 失败 41</div></div>
-        <div class="card bd"><div class="small muted">P95 耗时</div><div class="metric">3.2s</div><div class="small muted">中位数 1.8s</div></div>
-        <div class="card bd"><div class="small muted">涉及事故</div><div class="metric" style="color:var(--bad)">12</div><div class="small muted">归入 4 个失败模式</div></div>
+        <div class="card bd"><div class="small muted">执行成功率</div><div class="metric" style="color:var(--ok)">96.8%</div><div class="small muted">只表示技术执行状态</div></div>
+        <div class="card bd"><div class="small muted">质量评估覆盖率</div><div class="metric">72.4%</div><div class="small muted">通过 901 · 不通过 28 · 未评估 355</div></div>
+        <div class="card bd"><div class="small muted">涉及事故</div><div class="metric" style="color:var(--bad)">12</div><div class="small muted">覆盖 6 类故障</div></div>
       </div>
-
       <div class="filters">
-        <select id="runStatusFilter" onchange="filterRuns(this.value)">
-          <option value="all">状态：全部</option>
-          <option value="success">状态：成功</option>
-          <option value="failed">状态：失败</option>
-        </select>
-        <select><option>任务：全部</option><option>退款</option><option>改址</option><option>订单查询</option></select>
-        <select><option>Agent 版本：全部</option><option>v1.3.2</option><option>v1.3.1</option></select>
-        <select><option>时间：近 24 小时</option><option>近 7 天</option></select>
-        <button class="btn" onclick="toast('筛选条件已刷新（演示数据）')">刷新</button>
+        <select id="runExecutionFilter" onchange="filterRuns()" aria-label="执行状态"><option value="all">执行状态：全部</option><option value="success">执行成功</option><option value="failed">执行失败</option></select>
+        <select id="runQualityFilter" onchange="filterRuns()" aria-label="质量结论"><option value="all">质量结论：全部</option><option value="pass">通过</option><option value="fail">不通过</option><option value="unknown">未评估</option></select>
+        <select id="runNameFilter" onchange="filterRuns()" aria-label="运行名称"><option value="all">运行名称：全部</option><option value="退款处理">退款处理</option><option value="退款答复">退款答复</option><option value="退款执行">退款执行</option></select>
+        <select id="runVersionFilter" onchange="filterRuns()" aria-label="Agent 版本"><option value="all">Agent 版本：全部</option><option value="v1.3.2">v1.3.2</option><option value="v1.3.1">v1.3.1</option></select>
+        <button class="btn" onclick="resetRunFilters()">清除筛选</button>
       </div>
-
-      <div class="card">
-        <div class="hd"><b>运行记录</b><span class="tag t-gray" id="runVisibleCount">6 条演示数据</span><span class="small muted">成功与失败 Trace 使用同一份采集数据</span></div>
+      <div class="card data-table-card">
+        <div class="taxonomy-note"><b>状态口径：</b>执行状态只描述程序是否完成；质量结论描述业务结果是否正确；事故状态描述是否进入排障流程。执行成功但质量不通过的 Trace 仍会进入事故列表，只有质量通过的 Trace 才可作为推荐基线。</div>
+        <div class="hd"><b>运行记录</b><span class="tag t-gray" id="runVisibleCount">6 条记录</span><span class="small muted">订单助手 · 最近 24 小时</span></div>
         <table>
-          <thead><tr><th>Trace ID</th><th>状态</th><th>开始时间</th><th>任务</th><th>Agent 版本</th><th>步骤</th><th>耗时</th><th>关联信息</th></tr></thead>
+          <thead><tr><th>Trace ID</th><th>执行状态</th><th>质量结论</th><th>开始时间</th><th>运行名称</th><th>Agent 版本</th><th>步骤数</th><th>耗时</th><th>事故状态</th></tr></thead>
           <tbody id="runRows">
-            <tr class="click run-row" data-status="failed" onclick="openIncident()">
-              <td class="mono"><b>TRC-4a7c</b></td><td><span class="run-status failed">失败</span></td><td class="small">08-14 10:22:06</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>4.8s</td><td><span class="tag t-bad">事故 INC-0814-003</span></td>
-            </tr>
-            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-9f21','退款','08-14 08:17:42','2.4s')">
-              <td class="mono"><b>TRC-9f21</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 08:17:42</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>2.4s</td><td><span class="tag t-brand">推荐基线</span></td>
-            </tr>
-            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-a8de','退款','08-14 10:18:31','1.2s')">
-              <td class="mono"><b>TRC-a8de</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 10:18:31</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>1.2s</td><td class="muted small">—</td>
-            </tr>
-            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-b31f','退款','08-14 10:12:09','1.9s')">
-              <td class="mono"><b>TRC-b31f</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 10:12:09</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>1.9s</td><td class="muted small">—</td>
-            </tr>
-            <tr class="click run-row" data-status="failed" onclick="toast('该失败 Trace 已归入事故 INC-2026-0814-002（演示仅开放主事故详情）')">
-              <td class="mono"><b>TRC-c204</b></td><td><span class="run-status failed">失败</span></td><td class="small">08-14 09:47:18</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>4.5s</td><td><span class="tag t-bad">事故 INC-0814-002</span></td>
-            </tr>
-            <tr class="click run-row" data-status="success" onclick="openNormalTrace('TRC-d771','退款','08-14 09:41:55','2.1s')">
-              <td class="mono"><b>TRC-d771</b></td><td><span class="run-status success">成功</span></td><td class="small">08-14 09:41:55</td><td>退款</td><td class="mono small">v1.3.2</td><td>9</td><td>2.1s</td><td class="muted small">—</td>
-            </tr>
+            <tr class="click run-row" data-execution="failed" data-quality="unknown" data-run="退款执行" data-version="v1.3.2" onclick="openIncident()"><td class="mono"><b>TRC-4a7c</b></td><td><span class="run-status failed">失败</span></td><td><span class="tag t-gray">未评估</span></td><td class="small">08-14 10:22</td><td>退款执行</td><td class="mono small">v1.3.2</td><td>9</td><td>4.8s</td><td><span class="tag t-bad">INC-0814-003</span></td></tr>
+            <tr class="click run-row" data-execution="success" data-quality="pass" data-run="退款处理" data-version="v1.3.2" onclick="openNormalTrace('TRC-9f21','退款处理','08-14 08:17:42','2.4s','pass')"><td class="mono"><b>TRC-9f21</b></td><td><span class="run-status success">成功</span></td><td><span class="tag t-ok">通过</span></td><td class="small">08-14 08:17</td><td>退款处理</td><td class="mono small">v1.3.2</td><td>9</td><td>2.4s</td><td><span class="tag t-brand">推荐基线</span></td></tr>
+            <tr class="click run-row" data-execution="success" data-quality="fail" data-run="退款答复" data-version="v1.3.2" onclick="focusIncident('MODEL_OUTPUT','LLM')"><td class="mono"><b>TRC-a8de</b></td><td><span class="run-status success">成功</span></td><td><span class="tag t-bad">不通过</span></td><td class="small">08-14 10:18</td><td>退款答复</td><td class="mono small">v1.3.2</td><td>7</td><td>1.2s</td><td><span class="tag t-bad">INC-0814-011</span></td></tr>
+            <tr class="click run-row" data-execution="success" data-quality="unknown" data-run="退款处理" data-version="v1.3.2" onclick="openNormalTrace('TRC-b31f','退款处理','08-14 10:12:09','1.9s','unknown')"><td class="mono"><b>TRC-b31f</b></td><td><span class="run-status success">成功</span></td><td><span class="tag t-gray">未评估</span></td><td class="small">08-14 10:12</td><td>退款处理</td><td class="mono small">v1.3.2</td><td>8</td><td>1.9s</td><td class="muted small">未立案</td></tr>
+            <tr class="click run-row" data-execution="failed" data-quality="unknown" data-run="退款执行" data-version="v1.3.1" onclick="focusIncident('TOOL_CALL','TOOL')"><td class="mono"><b>TRC-c204</b></td><td><span class="run-status failed">失败</span></td><td><span class="tag t-gray">未评估</span></td><td class="small">08-14 09:47</td><td>退款执行</td><td class="mono small">v1.3.1</td><td>6</td><td>30.0s</td><td><span class="tag t-bad">INC-0814-008</span></td></tr>
+            <tr class="click run-row" data-execution="success" data-quality="pass" data-run="退款处理" data-version="v1.3.1" onclick="openNormalTrace('TRC-d771','退款处理','08-14 09:41:55','2.1s','pass')"><td class="mono"><b>TRC-d771</b></td><td><span class="run-status success">成功</span></td><td><span class="tag t-ok">通过</span></td><td class="small">08-14 09:41</td><td>退款处理</td><td class="mono small">v1.3.1</td><td>9</td><td>2.1s</td><td class="muted small">未立案</td></tr>
           </tbody>
         </table>
         <div class="run-empty" id="runEmpty">当前筛选条件下没有运行记录。</div>
-        <div class="bd small muted">点击成功 Trace 查看完整执行详情；点击失败 Trace 进入对应事故诊断。正式版支持游标分页与 Trace ID 搜索。</div>
+        <div class="bd small muted">点击质量通过的 Trace 查看完整详情；点击已立案 Trace 进入对应事故。</div>
       </div>
     </section>
 
@@ -331,13 +87,13 @@
         <div class="bd">
           <div class="trace-hero">
             <div>
-              <div class="run-status success">运行成功</div>
+              <div><span class="run-status success">执行成功</span> <span class="tag t-ok" id="traceQualityBadge">质量通过</span></div>
               <h2 id="traceDetailTitle">退款 · TRC-9f21</h2>
-              <div class="small muted">本次执行未命中错误规则或人工告警，不生成候选原因。</div>
+              <div class="small muted" id="traceQualitySummary">本次执行技术状态成功，且质量评估通过；不生成事故候选原因。</div>
             </div>
             <div>
               <button class="btn" onclick="go('runs')">← 返回运行记录</button>
-              <button class="btn pri" onclick="useTraceAsBaseline()">⇄ 设为对比基线</button>
+              <button class="btn pri" id="traceBaselineButton" onclick="useTraceAsBaseline()">⇄ 设为对比基线</button>
             </div>
           </div>
           <div class="trace-facts">
@@ -349,7 +105,7 @@
         </div>
       </div>
 
-      <div class="success-note mb10"><b>✓</b><div><b>本次运行正常</b><div class="small">完整 Trace 仍可用于采集核对、性能分析和成功/失败 Diff 基线，不进入事故复核流程。</div></div></div>
+      <div class="success-note mb10" id="traceStatusNote"><b>✓</b><div><b id="traceStatusTitle">执行成功且质量通过</b><div class="small" id="traceStatusText">该结论同时满足技术执行与质量评估，可用于采集核对、性能分析和 Diff 基线。</div></div></div>
 
       <div class="grid g2 mb10">
         <div class="card">
@@ -392,72 +148,43 @@
     <!-- ============ PAGE: incidents ============ -->
     <section class="page show" id="pg-incidents">
       <div class="grid g4">
-        <div class="card cluster selected bd" style="padding:16px 18px" onclick="selectCluster(this)">
-          <div style="display:flex;justify-content:space-between"><b>过期状态污染</b><span class="tag t-bad">FM-01</span></div>
-          <div class="cnt" style="color:var(--bad)">12 <span class="small muted" style="font-weight:400">起 / 24h</span></div>
-          <div class="trend" style="color:var(--bad)">▲ 较昨日 +5 · 影响 9 个会话</div>
-          <div class="small muted mt10">最高置信诊断：记忆快照过期后被下游读取（86%）</div>
-        </div>
-        <div class="card cluster bd" style="padding:16px 18px" onclick="toast('演示原型仅开放 FM-01 簇的完整链路')">
-          <div style="display:flex;justify-content:space-between"><b>传参契约缺字段</b><span class="tag t-warn">FM-02</span></div>
-          <div class="cnt" style="color:var(--warn)">7 <span class="small muted" style="font-weight:400">起 / 24h</span></div>
-          <div class="trend muted">— 持平 · 影响 6 个会话</div>
-          <div class="small muted mt10">最高置信诊断：步骤间传参缺少 currency 字段（63%）</div>
-        </div>
-        <div class="card cluster bd" style="padding:16px 18px" onclick="toast('演示原型仅开放 FM-01 簇的完整链路')">
-          <div style="display:flex;justify-content:space-between"><b>工具参数格式错误</b><span class="tag t-warn">FM-03</span></div>
-          <div class="cnt">5 <span class="small muted" style="font-weight:400">起 / 24h</span></div>
-          <div class="trend" style="color:var(--ok)">▼ 较昨日 -3 · 影响 4 个会话</div>
-          <div class="small muted mt10">最高置信诊断：date 参数非 ISO 格式（91%）</div>
-        </div>
-        <div class="card cluster bd" style="padding:16px 18px" onclick="toast('演示原型仅开放 FM-01 簇的完整链路')">
-          <div style="display:flex;justify-content:space-between"><b>检索上下文不相关</b><span class="tag t-gray">FM-04</span></div>
-          <div class="cnt">3 <span class="small muted" style="font-weight:400">起 / 24h</span></div>
-          <div class="trend muted">— 持平 · 影响 3 个会话</div>
-          <div class="small muted mt10">最高置信诊断：低置信线索（38%），建议补数据</div>
-        </div>
+        <div class="card cluster selected bd" style="padding:16px 18px" onclick="selectCluster(this,'STALE_STATE')"><div style="display:flex;justify-content:space-between"><b>状态与记忆过期</b><span class="tag t-bad">FM-01</span></div><div class="cnt" style="color:var(--bad)">12 <span class="small muted" style="font-weight:400">起 / 24h</span></div><div class="trend" style="color:var(--bad)">▲ 较昨日 +5 · 影响 9 个会话</div><div class="small muted mt10">代表诊断：过期快照被下游读取 · 证据充分</div></div>
+        <div class="card cluster bd" style="padding:16px 18px" onclick="selectCluster(this,'CONTRACT')"><div style="display:flex;justify-content:space-between"><b>步骤契约异常</b><span class="tag t-warn">FM-02</span></div><div class="cnt" style="color:var(--warn)">7 <span class="small muted" style="font-weight:400">起 / 24h</span></div><div class="trend muted">— 持平 · 影响 6 个会话</div><div class="small muted mt10">代表诊断：交接参数缺少 currency · 有一定依据</div></div>
+        <div class="card cluster bd" style="padding:16px 18px" onclick="selectCluster(this,'TOOL_CALL')"><div style="display:flex;justify-content:space-between"><b>工具调用异常</b><span class="tag t-warn">FM-03</span></div><div class="cnt">5 <span class="small muted" style="font-weight:400">起 / 24h</span></div><div class="trend" style="color:var(--ok)">▼ 较昨日 -3 · 影响 4 个会话</div><div class="small muted mt10">代表诊断：refund_api 超时 · 证据充分</div></div>
+        <div class="card cluster bd" style="padding:16px 18px" onclick="selectCluster(this,'MODEL_OUTPUT')"><div style="display:flex;justify-content:space-between"><b>模型输出异常</b><span class="tag t-gray">FM-05</span></div><div class="cnt">3 <span class="small muted" style="font-weight:400">起 / 24h</span></div><div class="trend muted">— 持平 · 影响 3 个会话</div><div class="small muted mt10">代表诊断：执行成功但答复违背政策 · 有一定依据</div></div>
       </div>
-
       <div class="filters">
-        <select><option>簇：过期状态污染 (FM-01)</option><option>全部簇</option></select>
-        <select><option>步骤：全部</option><option>规划</option><option>退款执行</option><option>知识检索</option></select>
-        <select><option>时间：近 24 小时</option><option>近 7 天</option></select>
-        <select><option>复核状态：全部</option><option>待复核</option><option>已复核</option></select>
-        <select><option>置信度：全部</option><option>≥ 80%</option><option>40–80%</option></select>
+        <select id="incidentFailureFilter" onchange="filterIncidents()" aria-label="故障类型"><option value="all">故障类型：全部</option><option value="STALE_STATE">状态与记忆过期</option><option value="CONTRACT">步骤契约异常</option><option value="TOOL_CALL">工具调用异常</option><option value="MODEL_OUTPUT">模型输出异常</option><option value="RETRIEVAL">检索质量异常</option><option value="ORCHESTRATION">编排与路由异常</option></select>
+        <select id="incidentStepType" onchange="filterIncidents()" aria-label="步骤类型"><option value="all">步骤类型：全部</option><option value="AGENT">Agent</option><option value="LLM">LLM</option><option value="TOOL">工具（Tool）</option><option value="RETRIEVAL">检索（Retrieval）</option><option value="MEMORY">记忆（Memory）</option><option value="STATE">状态（State）</option><option value="HANDOFF">路由/交接（Handoff）</option></select>
+        <input id="incidentStepName" type="search" aria-label="搜索步骤名称" placeholder="步骤名称：搜索业务节点" oninput="filterIncidents()">
+        <select id="incidentTimeFilter" onchange="filterIncidents()" aria-label="时间范围"><option value="24">时间：近 24 小时</option><option value="168">近 7 天</option></select>
+        <select id="incidentReviewFilter" onchange="filterIncidents()" aria-label="复核状态"><option value="all">复核状态：全部</option><option value="pending">待复核</option><option value="confirmed">已确认</option></select>
+        <select id="incidentEvidenceFilter" onchange="filterIncidents()" aria-label="证据等级"><option value="all">证据等级：全部</option><option value="sufficient">证据充分</option><option value="partial">有一定依据</option><option value="insufficient">证据不足</option></select>
+        <button class="btn" onclick="resetIncidentFilters()">清除筛选</button>
       </div>
-
-      <div class="card" id="incList">
-        <div class="hd"><b>事故列表 · 过期状态污染（FM-01）</b><span class="tag t-gray">12 条</span></div>
-        <table>
-          <thead><tr><th>事故 ID</th><th>时间</th><th>任务类型</th><th>症状</th><th>首故障点（候选）</th><th>置信度</th><th>复核状态</th></tr></thead>
-          <tbody>
-            <tr class="click" onclick="openIncident()">
-              <td class="mono"><b>INC-2026-0814-003</b></td><td class="small">08-14 10:22</td><td>退款</td>
-              <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot v3 过期</td>
-              <td><div class="conf"><div class="bar"><div class="fill" style="width:86%;background:var(--rule)"></div></div>86%</div></td>
-              <td id="vstat-list"><span class="tag t-warn">待复核</span></td>
-            </tr>
-            <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
-              <td class="mono">INC-2026-0814-002</td><td class="small">08-14 09:47</td><td>退款</td>
-              <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot v2 过期</td>
-              <td><div class="conf"><div class="bar"><div class="fill" style="width:84%;background:var(--rule)"></div></div>84%</div></td>
-              <td><span class="tag t-warn">待复核</span></td>
-            </tr>
-            <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
-              <td class="mono">INC-2026-0813-041</td><td class="small">08-13 21:03</td><td>改址</td>
-              <td>改址失败 · 地址版本冲突</td><td>记忆读取 · address_snapshot 过期</td>
-              <td><div class="conf"><div class="bar"><div class="fill" style="width:79%;background:var(--rule)"></div></div>79%</div></td>
-              <td><span class="tag t-ok">已确认 · 王工</span></td>
-            </tr>
-            <tr class="click" onclick="toast('演示原型仅开放 INC-2026-0814-003 的完整链路')">
-              <td class="mono">INC-2026-0813-036</td><td class="small">08-13 18:30</td><td>退款</td>
-              <td>退款接口 422 · 超额退款请求</td><td>记忆读取 · order_snapshot 过期</td>
-              <td><div class="conf"><div class="bar"><div class="fill" style="width:88%;background:var(--rule)"></div></div>88%</div></td>
-              <td><span class="tag t-ok">已确认 · 李工</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="bd small muted">已确认根因 2 条 → 历史案例库已收录同模式案例 INC-0813-036，用于本簇置信度加权。</div>
+      <div class="card data-table-card" id="incList">
+        <div class="taxonomy-note"><b>统一口径：</b>故障类型回答“出了什么问题”，步骤类型回答“哪类组件出问题”，步骤名称保留业务语义。证据等级用于界面决策，未经校准的内部评分不直接展示。</div>
+        <div class="hd"><b>事故列表</b><span class="tag t-gray" id="incidentVisibleCount">6 条记录</span></div>
+        <table><thead><tr><th>事故 ID</th><th>时间</th><th>Agent / 运行</th><th>症状</th><th>首故障步骤（类型 / 名称）</th><th>证据等级</th><th>复核状态</th></tr></thead><tbody>
+          <tr class="click incident-row" data-failure="STALE_STATE" data-step-type="MEMORY" data-step-name="读取 order_snapshot v3" data-age="1" data-review="pending" data-evidence="sufficient" onclick="openIncident()"><td class="mono"><b>INC-2026-0814-003</b></td><td class="small">08-14 10:22</td><td>订单助手<div class="small muted">退款执行</div></td><td>退款接口 422 · 超额退款</td><td><span class="tag t-warn">MEMORY</span><div class="small mt10">读取 order_snapshot v3</div></td><td><span class="tag t-ok">证据充分</span></td><td id="vstat-list"><span class="tag t-warn">待复核</span></td></tr>
+          <tr class="click incident-row" data-failure="CONTRACT" data-step-type="HANDOFF" data-step-name="规划到退款执行交接" data-age="2" data-review="pending" data-evidence="partial" onclick="showIncidentPreview(this)"><td class="mono">INC-2026-0814-006</td><td class="small">08-14 09:47</td><td>订单助手<div class="small muted">退款执行</div></td><td>工具拒绝 · currency 缺失</td><td><span class="tag t-brand">HANDOFF</span><div class="small mt10">规划 → 退款执行</div></td><td><span class="tag t-warn">有一定依据</span></td><td><span class="tag t-warn">待复核</span></td></tr>
+          <tr class="click incident-row" data-failure="TOOL_CALL" data-step-type="TOOL" data-step-name="调用 refund_api" data-age="3" data-review="pending" data-evidence="sufficient" onclick="showIncidentPreview(this)"><td class="mono">INC-2026-0814-008</td><td class="small">08-14 09:31</td><td>订单助手<div class="small muted">退款执行</div></td><td>refund_api 超时 30s</td><td><span class="tag t-bad">TOOL</span><div class="small mt10">调用 refund_api</div></td><td><span class="tag t-ok">证据充分</span></td><td><span class="tag t-warn">待复核</span></td></tr>
+          <tr class="click incident-row" data-failure="MODEL_OUTPUT" data-step-type="LLM" data-step-name="生成退款答复" data-age="4" data-review="pending" data-evidence="partial" onclick="showIncidentPreview(this)"><td class="mono">INC-2026-0814-011</td><td class="small">08-14 09:18</td><td>订单助手<div class="small muted">退款答复</div></td><td>执行成功 · 答复违背退款政策</td><td><span class="tag t-model">LLM</span><div class="small mt10">生成退款答复</div></td><td><span class="tag t-warn">有一定依据</span></td><td><span class="tag t-warn">待复核</span></td></tr>
+          <tr class="click incident-row" data-failure="RETRIEVAL" data-step-type="RETRIEVAL" data-step-name="检索退款政策" data-age="18" data-review="confirmed" data-evidence="insufficient" onclick="showIncidentPreview(this)"><td class="mono">INC-2026-0814-012</td><td class="small">08-14 08:55</td><td>订单助手<div class="small muted">退款答复</div></td><td>召回文档与当前地区不匹配</td><td><span class="tag t-gray">RETRIEVAL</span><div class="small mt10">检索退款政策</div></td><td><span class="tag t-gray">证据不足</span></td><td><span class="tag t-ok">已确认</span></td></tr>
+          <tr class="click incident-row" data-failure="ORCHESTRATION" data-step-type="AGENT" data-step-name="异常退款路由" data-age="30" data-review="confirmed" data-evidence="partial" onclick="showIncidentPreview(this)"><td class="mono">INC-2026-0813-041</td><td class="small">08-13 05:03</td><td>订单助手<div class="small muted">异常退款路由</div></td><td>高风险订单进入普通退款流程</td><td><span class="tag t-brand">AGENT</span><div class="small mt10">异常退款路由</div></td><td><span class="tag t-warn">有一定依据</span></td><td><span class="tag t-ok">已确认</span></td></tr>
+        </tbody></table>
+        <div class="run-empty" id="incidentEmpty">当前筛选条件下没有事故。</div><div class="bd small muted">历史案例只作为辅助证据，不直接提高界面等级。</div>
+      </div>
+      <div class="card incident-preview mt10" id="incidentPreview" hidden aria-live="polite">
+        <div class="hd"><b id="incidentPreviewId">事故概览</b><span class="tag t-gray" id="incidentPreviewReview">—</span></div>
+        <div class="bd">
+          <div class="grid g3">
+            <div><div class="k">症状</div><div id="incidentPreviewSymptom">—</div></div>
+            <div><div class="k">首故障步骤</div><div id="incidentPreviewStep">—</div></div>
+            <div><div class="k">证据等级</div><div id="incidentPreviewEvidence">—</div></div>
+          </div>
+          <div class="small muted mt10">事故概览与当前筛选条件同时保留；需要继续排查时，可从同一列表切换其他事故。</div>
+        </div>
       </div>
     </section>
 
@@ -470,7 +197,7 @@
         <div class="symp">
           <div><div class="k">报错节点</div><div class="v" style="color:var(--bad)">S9 · refund_api 调用失败</div><div class="small muted mono mt10">HTTP 422 REFUND_AMOUNT_EXCEEDED<br>请求 ¥180 &gt; 可退 ¥60</div></div>
           <div><div class="k">影响范围</div><div class="v">9 会话 / 7 用户</div><div class="small muted mt10">近 24h 同模式 12 起</div></div>
-          <div><div class="k">失败模式</div><div class="v">FM-01</div><div class="small muted mt10">过期状态污染</div></div>
+          <div><div class="k">故障类型</div><div class="v">FM-01</div><div class="small muted mt10">过期状态污染</div></div>
           <div><div class="k">数据完整度</div><div class="v" style="color:var(--ok)">92%</div><div class="small muted mt10">证据链可信 · <span class="pill-link" onclick="go('checkup')">查看体检</span></div></div>
         </div>
       </div>
@@ -513,7 +240,7 @@
                 <div class="small muted mt10" style="margin-top:3px">首故障点 S3 · 传播路径 S3→S4→S5→S7→S9 · 命中历史案例 INC-0813-036（同模式，已确认）</div>
               </div>
               <span class="tag t-rule">规则判定</span>
-              <div class="conf"><div class="bar"><div class="fill" style="width:86%;background:var(--rule)"></div></div><b>86%</b></div>
+              <div><span class="tag t-ok">证据充分</span><div class="small muted mt10">4 条支持 · 2 条反面</div></div>
               <span class="muted">▾</span>
             </div>
             <div class="body">
@@ -538,7 +265,7 @@
                 <div class="small muted" style="margin-top:3px">涉及 S5 · 存在强反证，采信需谨慎</div>
               </div>
               <span class="tag t-model">模型推断</span>
-              <div class="conf"><div class="bar"><div class="fill" style="width:41%;background:var(--model)"></div></div><b>41%</b></div>
+              <div><span class="tag t-warn">有一定依据</span><div class="small muted mt10">需核对强反证</div></div>
               <span class="muted">▾</span>
             </div>
             <div class="body">
@@ -552,16 +279,16 @@
             <div class="row" onclick="togglecand('cand3')">
               <div class="rank">3</div>
               <div style="flex:1">
-                <b class="muted">线索（低置信度，已折叠）：退款接口限流</b>
-                <div class="small muted" style="margin-top:3px">置信度 22% &lt; 40% 阈值 · 仅供参考，不建议直接采信，复核入口已禁用</div>
+                <b class="muted">线索（证据不足，已折叠）：退款接口限流</b>
+                <div class="small muted" style="margin-top:3px">当前证据不足 · 仅供参考，不建议直接采信，复核入口已禁用</div>
               </div>
               <span class="tag t-model">模型推断</span>
-              <div class="conf"><div class="bar"><div class="fill" style="width:22%;background:#94a3b8"></div></div><b class="muted">22%</b></div>
+              <div><span class="tag t-gray">证据不足</span></div>
               <span class="muted">▾</span>
             </div>
             <div class="body">
               <div class="evi counter"><div class="ei">⚡</div><div><b>反证充分</b>：响应码为 422 而非 429；响应头无 <span class="mono">Retry-After</span>；同时段该接口其余 214 次调用成功率 99.5%。</div></div>
-              <div class="mt10"><button class="btn disabled tip" data-tip="低置信度线索不进入正式复核流程（异常 G-2）" onclick="return false">✓ 进入诊断复核</button></div>
+              <div class="mt10"><button class="btn disabled tip" data-tip="证据不足线索不进入正式复核流程（异常 G-2）" onclick="return false">✓ 进入诊断复核</button></div>
             </div>
           </div>
 
@@ -589,8 +316,8 @@
     <section class="page" id="pg-diff">
       <div class="card mb10">
         <div class="hd"><b>成功 / 失败 Diff</b>
-          <span class="small muted">基线：<span class="mono" id="diffBaselineId">TRC-9f21</span>（自动推荐：同 Agent 版本 v1.3.2 · 同任务类型「退款」· 时间邻近 2h）</span>
-          <button class="btn" style="margin-left:auto;padding:5px 12px;font-size:12px" onclick="toast('演示原型仅内置一条推荐基线；正式版可从候选基线列表更换')">更换基线</button>
+          <span class="small muted">基线：<span class="mono" id="diffBaselineId">TRC-9f21</span>（质量通过 · 同 Agent/版本/运行名称 · 输入语义、工具与数据版本兼容；时间仅用于排序）</span>
+          <button class="btn" style="margin-left:auto;padding:5px 12px;font-size:12px" onclick="toast('没有找到其他满足兼容性条件的质量通过基线')">更换基线</button>
         </div>
         <div class="bd small muted">高亮行为差异项；带「证据」角标的差异被候选根因 1 引用。大字段仅对比哈希与摘要。</div>
       </div>
@@ -655,7 +382,7 @@
     <!-- ============ PAGE: review ============ -->
     <section class="page" id="pg-review">
       <div class="card mb10">
-        <div class="hd"><b>诊断复核 · 候选原因 1</b><span class="tag t-rule">规则判定 · 86%</span>
+        <div class="hd"><b>诊断复核 · 候选原因 1</b><span class="tag t-rule">规则判定 · 证据充分</span>
           <span class="small muted">记忆快照过期：S3 读取 4h 前的 order_snapshot v3，失效可退金额注入下游</span></div>
         <div class="bd small muted">系统并列展示支持证据、反面证据与其他解释。请核对原始记录后确认 —— 复核结果将用于校准诊断器，并决定能否转为回归用例。</div>
       </div>
@@ -697,7 +424,7 @@
 
     <!-- ============ PAGE: gate ============ -->
     <section class="page" id="pg-gate">
-      <div class="card mb10">
+      <div class="card mb10 data-table-card">
         <div class="hd"><b>回归集 · 退款流程回归集</b><span class="tag t-gray" id="caseCount">12 个用例</span></div>
         <table>
           <thead><tr><th>用例 ID</th><th>来源事故</th><th>期望不变量</th><th>快照录制</th><th>复核状态</th></tr></thead>
@@ -730,7 +457,7 @@
 
       <div class="card">
         <div class="hd"><b>门禁运行报告</b><span class="mono small muted">release v1.4.0-rc2 · agent v1.3.3 · 模式：警告（warn）</span>
-          <button class="btn" style="margin-left:auto;padding:5px 12px;font-size:12px" onclick="toast('已通过 Webhook 推送到发布流水线（演示）')">推送 Webhook</button></div>
+          <button class="btn" style="margin-left:auto;padding:5px 12px;font-size:12px" onclick="toast('已通过 Webhook 推送到发布流水线')">推送 Webhook</button></div>
         <div class="bd">
           <div class="gsum">
             <div><div class="big" id="gwarn" style="color:var(--warn)">警告</div><div class="small muted">默认不阻断，可按回归集配置为阻断</div></div>
@@ -784,7 +511,7 @@
               <tr><td colspan="4" style="padding:0 12px"><div class="fixguide" id="fix2">检测到 <span class="mono">XunjiCallbackHandler</span> 与 <span class="mono">xunji.instrument()</span> 同时启用。保留框架插件即可，删除手动埋点：<span class="mono">xunji.instrument()  # ← 移除此行</span></div></td></tr>
             </tbody>
           </table>
-          <div class="small muted mt10">体检每小时自动运行一次；四项得分作为诊断置信度的前置门槛 —— 完整度不足时，相关规则自动禁用并在工作台明示「数据不足」。</div>
+          <div class="small muted mt10">体检每小时自动运行一次；四项得分作为诊断证据等级的前置门槛 —— 完整度不足时，相关规则自动禁用并在工作台明示「数据不足」。</div>
         </div>
       </div>
     </section>
@@ -803,7 +530,7 @@
               <tr><td>产品-小陈</td><td><span class="tag t-gray">查看者</span></td><td class="small">只读</td></tr>
             </tbody>
           </table>
-          <div class="bd"><button class="btn disabled tip" data-tip="第一期不含 SSO 与成员邀请，正式版开放" onclick="return false">+ 邀请成员</button></div>
+
         </div>
         <div class="card">
           <div class="hd"><b>脱敏策略</b><span class="tag t-ok">采集端优先</span></div>
@@ -836,7 +563,7 @@
           <div class="hd"><b>门禁模式</b></div>
           <div class="bd">
             <div class="fld"><label>退款流程回归集</label>
-              <select><option>警告（默认）—— 报告推送但不拦截发布</option><option>阻断 —— 不变量违反时拦截发布</option></select></div>
+              <select id="gateMode" aria-label="门禁模式" onchange="toast('门禁模式已切换为：'+this.options[this.selectedIndex].text)"><option>警告（默认）—— 报告推送但不拦截发布</option><option>阻断 —— 不变量违反时拦截发布</option></select></div>
             <div class="small muted">建议在门禁准确率稳定后再切换为阻断（设计决策 D-5）。</div>
           </div>
         </div>
@@ -873,7 +600,7 @@
         <label><input type="radio" name="rj"> 另有根因 —— 我可以指认正确根因（下一步选择 Span）</label>
       </div>
     </div>
-    <div class="mf"><button class="btn" onclick="closeModal('m-reject')">返回</button><button class="btn pri" onclick="closeModal('m-reject');toast('已记录排除结论与理由，校准信号已更新（演示）')">提交复核</button></div>
+    <div class="mf"><button class="btn" onclick="closeModal('m-reject')">返回</button><button class="btn pri" onclick="closeModal('m-reject');toast('已记录排除结论与理由，校准信号已更新')">提交复核</button></div>
   </div>
 </div>
 
@@ -885,7 +612,7 @@
       <div class="evi"><div class="ei">📋</div><div><b>memory.expiry 字段</b> —— 当前快照无显式过期时间，过期判定依赖写入时间推算。<span class="small muted">接入指引 → 体检页</span></div></div>
       <div class="evi"><div class="ei">📋</div><div><b>订单系统变更事件</b> —— 若能采集订单状态变更流，可直接证明快照失效时点。</div></div>
     </div>
-    <div class="mf"><button class="btn" onclick="closeModal('m-insuff')">返回</button><button class="btn pri" onclick="closeModal('m-insuff');toast('已记录「暂需补充证据」，待补数据清单已生成（演示）')">提交复核</button></div>
+    <div class="mf"><button class="btn" onclick="closeModal('m-insuff')">返回</button><button class="btn pri" onclick="closeModal('m-insuff');toast('已记录「暂需补充证据」，待补数据清单已生成')">提交复核</button></div>
   </div>
 </div>
 
@@ -900,7 +627,7 @@
 snapshot_age(order) ≤ 3600s 时方可作为金额来源</textarea></div>
     </div>
     <div class="mf">
-      <button class="btn bad" onclick="closeModal('m-review');toast('已退回：用例保持待复核，退回理由已通知生成人（演示）')">退回</button>
+      <button class="btn bad" onclick="closeModal('m-review');toast('已退回：用例保持待复核，退回理由已通知生成人')">退回</button>
       <button class="btn" onclick="closeModal('m-review')">取消</button>
       <button class="btn pri" onclick="approveCase()">确认生效</button>
     </div>
@@ -909,124 +636,6 @@ snapshot_age(order) ≤ 3600s 时方可作为金额来源</textarea></div>
 
 <div id="toast"></div>
 
-<script>
-var pageTitles={runs:'运行记录',trace:'正常 Trace 详情',incidents:'事故列表',workbench:'诊断工作台 · INC-2026-0814-003',diff:'成功/失败 Diff · TRC-4a7c vs TRC-9f21',review:'诊断复核 · 候选原因 1',gate:'回归集与发布门禁',checkup:'接入与采集体检',settings:'设置'};
-function go(p){
-  document.querySelectorAll('.page').forEach(function(el){el.classList.remove('show')});
-  document.getElementById('pg-'+p).classList.add('show');
-  document.querySelectorAll('#nav a').forEach(function(a){a.classList.toggle('active',a.dataset.page===p)});
-  document.getElementById('pageTitle').textContent=pageTitles[p];
-  window.scrollTo(0,0);
-  if(p==='gate'){var g=document.getElementById('gwarn');g.classList.remove('pulse');void g.offsetWidth;g.classList.add('pulse');}
-}
-document.querySelectorAll('#nav a').forEach(function(a){a.addEventListener('click',function(){go(a.dataset.page)})});
-
-function filterRuns(status){
-  var rows=Array.from(document.querySelectorAll('.run-row'));
-  var visible=0;
-  rows.forEach(function(row){
-    var show=status==='all'||row.dataset.status===status;
-    row.classList.toggle('hidden',!show);
-    if(show)visible++;
-  });
-  document.getElementById('runVisibleCount').textContent=visible+' 条演示数据';
-  document.getElementById('runEmpty').style.display=visible?'none':'block';
-}
-var activeTraceId='TRC-9f21';
-function openNormalTrace(id,task,time,duration){
-  activeTraceId=id;
-  document.getElementById('traceDetailTitle').textContent=task+' · '+id;
-  document.getElementById('traceDetailId').textContent=id;
-  document.getElementById('traceDetailTime').textContent=time;
-  document.getElementById('traceDetailDuration').textContent=duration;
-  go('trace');
-}
-function useTraceAsBaseline(){
-  var label=document.getElementById('diffBaselineId');
-  var head=document.getElementById('diffBaselineHead');
-  if(label)label.textContent=activeTraceId;
-  if(head)head.textContent=activeTraceId;
-  pageTitles.diff='成功/失败 Diff · TRC-4a7c vs '+activeTraceId;
-  go('diff');
-  toast('已将 '+activeTraceId+' 设为本次成功/失败对比基线');
-}
-
-function selectCluster(el){
-  document.querySelectorAll('.cluster').forEach(function(c){c.classList.remove('selected')});
-  el.classList.add('selected');
-  document.getElementById('incList').scrollIntoView({behavior:'smooth',block:'start'});
-  toast('已按簇「过期状态污染」筛选，点击列表中的事故进入诊断');
-}
-var diagLoaded=false;
-function openIncident(){
-  go('workbench');
-  var c=document.getElementById('cand1');if(!c.classList.contains('open'))togglecand('cand1');
-  if(!diagLoaded){
-    diagLoaded=true;
-    var l=document.getElementById('diagload'),c2=document.getElementById('cand2'),c3=document.getElementById('cand3');
-    l.style.display='flex';c2.style.display='none';c3.style.display='none';
-    setTimeout(function(){
-      l.style.display='none';
-      c2.style.display='block';c3.style.display='block';
-      c2.classList.add('fadein');c3.classList.add('fadein');
-      toast('语义分析完成：已追加 2 条模型候选与反证');
-    },1100);
-  }
-}
-function togglecand(id){document.getElementById(id).classList.toggle('open')}
-function hlSpan(s){
-  go('workbench');
-  var t=document.getElementById('ttree');t.style.display='block';
-  var row=document.getElementById('sp-'+s);
-  if(row){
-    document.querySelectorAll('.trow').forEach(function(r){r.classList.remove('located','flash')});
-    row.scrollIntoView({behavior:'smooth',block:'center'});
-    void row.offsetWidth;
-    row.classList.add('located','flash');
-  }
-  toast('已定位到原始事件 '+s+'（驻留高亮，可回看）');
-}
-var reviewDone=false;
-function submitReview(v){
-  if(v==='confirmed'){
-    reviewDone=true;
-    document.getElementById('reviewbar').style.display='none';
-    document.getElementById('vd-done').classList.add('show');
-    document.getElementById('vstat-wb').innerHTML='<span class="tag t-ok">已确认根因 · 李工</span>';
-    document.getElementById('vstat-list').innerHTML='<span class="tag t-ok">已确认 · 李工</span>';
-    toast('复核结论已写入校准日志与历史案例库');
-  }else if(v==='excluded'){openModal('m-reject');}
-  else{openModal('m-insuff');}
-}
-function openModal(id){document.getElementById(id).classList.add('show')}
-function closeModal(id){document.getElementById(id).classList.remove('show')}
-function openCaseModal(){openModal('m-case')}
-function createCase(){
-  closeModal('m-case');
-  document.getElementById('newCaseRow').style.display='table-row';
-  document.getElementById('caseCount').textContent='13 个用例';
-  go('gate');
-  toast('已生成回归用例 REG-1041（待复核）—— 点击该行复核不变量，确认生效后才参与门禁');
-}
-var caseReviewed=false;
-function openReviewModal(){
-  if(caseReviewed){toast('REG-1041 已复核生效，无需重复复核');return;}
-  openModal('m-review');
-}
-function approveCase(){
-  caseReviewed=true;
-  closeModal('m-review');
-  document.getElementById('revStat').innerHTML='<span class="tag t-ok">已复核 · 李工</span>';
-  document.getElementById('gateNewRow').style.display='table-row';
-  document.getElementById('gwarnCnt').textContent='2';
-  toast('复核通过 · REG-1041 已生效并加入门禁运行（演示即时重跑）');
-}
-var toastTimer;
-function toast(msg){
-  var t=document.getElementById('toast');t.textContent=msg;
-  t.classList.remove('in');void t.offsetWidth;t.classList.add('in');
-  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('in')},2800);
-}
-</script>
+<script src="js/app.js"></script>
 </body>
 </html>

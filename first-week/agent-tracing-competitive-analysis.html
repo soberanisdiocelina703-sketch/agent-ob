@@ -429,6 +429,7 @@
           <article class="card accent green"><span class="badge fact">配套</span><h3>Success-unit FinOps</h3><p><b>按成功任务计量的成本运营</b>：不按单次模型调用，而按每个成功业务任务的总成本优化。</p><p><b>4 + 2 + 5 + 3 = 14/20</b></p></article>
         </div>
         <div class="callout"><strong>壁垒在哪里</strong>不是图画得更漂亮，而是 Agent 故障本体、跨框架语义映射、经过人工确认的因果案例库和可持续诊断评测集。</div>
+        <div class="callout orange"><strong>验证靶子选择【建议】</strong>差异化验证优先选择「无低成本解法」的故障类别：FM-07 检索排序漂移、FM-08 多轮上下文冲突、FM-09 重试状态放大（编号与案例事实以 second-week/docs/00-故障分类与案例事实源 为准）。三类故障执行层全部成功、规则判不出，必须靠因果图 + 语义分析 + 证据引用才能定位，只有它们能证明证据化诊断的必要性；状态过期（FM-01）有 TTL + 变更订阅的低成本解法，仅作次要对照类别。</div>
       </section>
 
       <section id="mvp">
@@ -446,12 +447,12 @@
           <div class="card"><h3>明确不做</h3><ol><li>通用基础设施 APM</li><li>完整 Prompt 管理和低代码 Builder</li><li>自动修改并发布生产 Agent</li><li>全量模型网关</li><li>无证据的万能 AI 助手</li></ol></div>
         </div>
         <h3>一周原型路线</h3>
-        <div class="callout orange"><strong>范围收缩</strong>一周只验证“AgentLoop 数据之上的证据化根因定位”：1 个主框架、3 类典型故障、10–15 条已知根因 Trace，不追求完整平台。</div>
+        <div class="callout orange"><strong>范围收缩</strong>一周只验证“AgentLoop 数据之上的证据化根因定位”：1 个主框架、3 类典型故障、10–15 条已知根因 Trace，不追求完整平台。<br><b>【建议】</b>3 类典型故障明确为 FM-07 检索排序漂移 / FM-08 多轮上下文冲突 / FM-09 重试状态放大（见 second-week/docs/00 事实源）——均无低成本解法、执行层全成功、规则判不出；状态过期（FM-01）作为规则可判定的次要对照类别保留。</div>
         <div class="timeline">
           <div class="milestone"><b>第 1 天 · 数据契约</b><p>定义核心语义事件；选定 10–15 条已知根因 Trace。</p></div>
           <div class="milestone"><b>第 2 天 · 接入存储</b><p>打通 OTel + 1 个主框架；完成入库、脱敏和断链检查。</p></div>
           <div class="milestone"><b>第 3 天 · Trace / Diff</b><p>展示调用树；按状态、工具和交接对比成功链与失败链。</p></div>
-          <div class="milestone"><b>第 4 天 · 诊断 v0</b><p>规则覆盖 3 类故障；模型输出候选根因、证据与置信度。</p></div>
+          <div class="milestone"><b>第 4 天 · 诊断 v0</b><p>规则/不变量兜底确定性故障；因果图 + Diff + 模型语义覆盖 FM-07/08/09，输出候选根因、证据与置信度。</p></div>
           <div class="milestone"><b>第 5 天 · 确认闭环</b><p>支持确认/驳回诊断，并把已确认事故转为回归样本。</p></div>
           <div class="milestone"><b>第 6 天 · 集成测试</b><p>在 1–2 个真实 Agent 上回放事故，修复数据缺口和误报。</p></div>
           <div class="milestone"><b>第 7 天 · 演示决策</b><p>统计 Top-3 命中率、证据接受率和定位时间，决定是否进入正式 MVP。</p></div>

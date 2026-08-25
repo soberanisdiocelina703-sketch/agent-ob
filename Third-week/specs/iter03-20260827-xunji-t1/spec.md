@@ -29,7 +29,7 @@
 
 ## 3. 明确不做（Out of Scope）
 
-T2 语义增强（state/handoff/memory 采集与相关规则，建表与注解 API 只留定义）；多租户与鉴权；LangGraph/Dify 等其他框架适配；消息队列；ClickHouse/Postgres 真实部署（SQLite 替身，同构契约）；水平扩展。
+T2 语义增强（state/handoff/memory 采集与相关规则，含 FM-07 检索排序漂移 / FM-08 多轮上下文冲突 / FM-09 重试状态放大 三类语义故障的诊断规则——见 second-week/docs/00 事实源；建表与注解 API 只留定义）；多租户与鉴权；LangGraph/Dify 等其他框架适配；消息队列；ClickHouse/Postgres 真实部署（SQLite 替身，同构契约）；水平扩展。
 
 ## 4. 验收标准（对齐提示词自检清单）
 
