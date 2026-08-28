@@ -167,10 +167,24 @@ function renderRuns(){
 
   return `
   <div class="grid g4 mb16">
-    <div class="card bd"><div class="k">近 24 小时运行</div><div class="metric">1,284</div><div class="tiny muted">较昨日 +8.6%</div></div>
-    <div class="card bd"><div class="k">执行成功率</div><div class="metric" style="color:var(--ok)">96.8%</div></div>
-    <div class="card bd"><div class="k">质量评估覆盖率</div><div class="metric">72.4%</div><div class="tiny muted">通过 901 · 不通过 28 · 未评估 355</div></div>
-    <div class="card bd"><div class="k">涉及事故</div><div class="metric" style="color:var(--bad)">${INCIDENTS.length}</div></div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">近 24 小时运行</div>
+      <div class="metric">1,284</div>
+      <div class="tiny muted">较昨日 +8.6%</div>
+    </div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">执行成功率</div>
+      <div class="metric" style="color:var(--ok)">96.8%</div>
+    </div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">质量评估覆盖率</div>
+      <div class="metric">72.4%</div>
+      <div class="tiny muted">通过 901 · 不通过 28 · 未评估 355</div>
+    </div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">涉及事故</div>
+      <div class="metric" style="color:var(--bad)">${INCIDENTS.length}</div>
+    </div>
   </div>
 
   <div class="filters">
@@ -295,8 +309,7 @@ function renderIncidents(){
         <div class="tiny" style="color:${t.trend > 0 ? 'var(--bad)' : t.trend < 0 ? 'var(--ok)' : 'var(--muted)'}">
           ${t.trend > 0 ? '▲ +' + t.trend : t.trend < 0 ? '▼ ' + t.trend : '— 持平'} · 影响 ${t.sessions} 个会话</div>
         <div class="cmeta">
-          <div>低成本解法：<b style="color:${t.cheapFix === '无' ? 'var(--bad)' : 'var(--ink2)'}">${esc(t.cheapFix)}</b></div>
-          <div class="mt10">${tag(STAGE[t.stage], t.stage)}</div>
+          <div class="tiny muted">诊断路径：${esc(t.path)}</div>
         </div>
       </div>`).join('')}
   </div>
@@ -642,9 +655,20 @@ function renderReview(){
     <div class="hd"><b>复核结论</b></div>
     <div class="bd">
       ${verdict ? `<div class="verdictdone">${icon('check')}
-        <div><b>已提交：${verdict === 'confirmed' ? '确认是根因' : verdict === 'excluded' ? '排除该原因' : '暂需补充证据'}</b>
+        <div><b>已提交：${
+          typeof verdict === 'string' ?
+            (verdict === 'confirmed' ? '确认是根因' : verdict === 'excluded' ? '排除该原因' : '暂需补充证据') :
+          verdict.result === 'confirmed' ? '确认是根因' :
+          verdict.result === 'excluded' ?
+            `排除该原因（${verdict.reason === 'evidence_error' ? '证据错误' : verdict.reason === 'causality_broken' ? '因果不成立' : '另有根因'}）` :
+            '暂需补充证据'
+        }</b>
+        ${verdict.result === 'excluded' && verdict.alternativeCandidate ?
+          `<div class="small mt10">指认正确候选：#${parseInt(verdict.alternativeCandidate) + 1} ${esc(DIAGNOSES[state.incidentId].candidates[verdict.alternativeCandidate].title)}</div>` : ''}
+        ${verdict.result === 'insufficient' && verdict.note ?
+          `<div class="small mt10">备注：${esc(verdict.note)}</div>` : ''}
         <div class="small mt10">复核人 李工 · 已写入校准日志</div></div></div>
-        ${verdict === 'confirmed' ? `<button class="btn pri mt16" onclick="openCaseModal()">${icon('file')}转回归用例</button>` : ''}`
+        ${(verdict === 'confirmed' || verdict.result === 'confirmed') ? `<button class="btn pri mt16" onclick="openCaseModal()">${icon('file')}转回归用例</button>` : ''}`
       : `<div class="revact">
           <button class="btn ok" onclick="submitVerdict('confirmed')">${icon('check')}确认是根因</button>
           <button class="btn bad" onclick="submitVerdict('excluded')">${icon('x')}排除该原因</button>
@@ -656,33 +680,75 @@ function renderReview(){
 
 function submitVerdict(v){
   if (v === 'confirmed'){
-    state.verdicts[state.incidentId] = 'confirmed';
+    state.verdicts[state.incidentId] = { result: 'confirmed' };
     go('review', true);
     toast('已确认根因，复核结论写入校准日志');
   } else if (v === 'excluded'){
     openModal('排除该原因', `
+      <div class="fld"><label>排除理由</label></div>
       <div class="radios">
-        <label><input type="radio" name="rj" checked> 证据错误</label>
-        <label><input type="radio" name="rj"> 因果不成立</label>
-        <label><input type="radio" name="rj"> 另有根因</label>
-      </div>`,
+        <label><input type="radio" name="rj" value="evidence_error" checked> 证据错误（证据本身有误或不支持结论）</label>
+        <label><input type="radio" name="rj" value="causality_broken"> 因果不成立（证据真实但不构成根因）</label>
+        <label><input type="radio" name="rj" value="alternative_cause"> 另有根因（已有更可信的候选）</label>
+      </div>
+      <div class="fld" id="altCandField" style="display:none;margin-top:var(--s3)">
+        <label>指认正确候选</label>
+        <select id="altCandSelect">
+          ${DIAGNOSES[state.incidentId].candidates.map((c, i) =>
+            `<option value="${i}">#${c.rank} ${esc(c.title)}</option>`).join('')}
+        </select>
+      </div>
+      <script>
+        document.querySelectorAll('input[name="rj"]').forEach(r => {
+          r.addEventListener('change', () => {
+            document.getElementById('altCandField').style.display =
+              r.value === 'alternative_cause' ? 'block' : 'none';
+          });
+        });
+      </script>`,
       [{ label:'返回', cls:'btn', act:'closeModal()' },
        { label:'提交复核', cls:'btn pri', act:`applyExclude()` }]);
   } else {
     openModal('待补数据清单', `
+      <div class="fld"><label>缺失数据项</label></div>
       ${(DIAGNOSES[state.incidentId].gaps || ['补充采集该步骤的输入输出 payload']).map(g =>
-        `<div class="gapitem">${icon('file')}<div class="small">${esc(g)}</div></div>`).join('')}`,
+        `<div class="gapitem">${icon('file')}<div class="small">${esc(g)}</div></div>`).join('')}
+      <div class="fld" style="margin-top:var(--s3)"><label>备注（可选）</label>
+        <textarea id="insufNote" rows="2" placeholder="补充说明数据用途或预期完成时间"></textarea>
+      </div>`,
       [{ label:'返回', cls:'btn', act:'closeModal()' },
        { label:'提交复核', cls:'btn pri', act:`applyInsufficient()` }]);
   }
 }
 function applyExclude(){
-  state.verdicts[state.incidentId] = 'excluded';
+  const reason = document.querySelector('input[name="rj"]:checked')?.value || 'evidence_error';
+  const altCand = reason === 'alternative_cause' ?
+    (document.getElementById('altCandSelect')?.value || null) : null;
+
+  state.verdicts[state.incidentId] = {
+    result: 'excluded',
+    reason: reason,
+    alternativeCandidate: altCand
+  };
+
+  const reasonText = {
+    evidence_error: '证据错误',
+    causality_broken: '因果不成立',
+    alternative_cause: altCand ? `另有根因（候选 #${parseInt(altCand)+1}）` : '另有根因'
+  };
+
   closeModal(); go('review', true);
-  toast('已记录排除结论与理由，校准信号已更新');
+  toast(`已记录排除结论（${reasonText[reason]}），校准信号已更新`);
 }
 function applyInsufficient(){
-  state.verdicts[state.incidentId] = 'insufficient';
+  const note = document.getElementById('insufNote')?.value || '';
+
+  state.verdicts[state.incidentId] = {
+    result: 'insufficient',
+    note: note,
+    gaps: DIAGNOSES[state.incidentId].gaps || []
+  };
+
   closeModal(); go('review', true);
   toast('已记录「暂需补充证据」，待补数据清单已生成');
 }
@@ -693,16 +759,25 @@ function renderGate(){
   const allCases = SUITES.flatMap(s => s.cases).concat(state.cases);
   return `
   <div class="grid g4 mb16">
-    <div class="card bd"><div class="k">回归用例总数</div><div class="metric">${allCases.length}</div>
-      <div class="tiny muted">来自 ${new Set(allCases.map(c => c.from)).size} 起已确认事故</div></div>
-    <div class="card bd"><div class="k">最近门禁结果</div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">回归用例总数</div>
+      <div class="metric">${allCases.length}</div>
+      <div class="tiny muted">来自 ${new Set(allCases.map(c => c.from)).size} 起已确认事故</div>
+    </div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">最近门禁结果</div>
       <div class="metric" style="color:var(--warn)">警告</div>
-      <div class="tiny muted">${esc(run.release)} · ${run.passed}/${run.total} 通过</div></div>
-    <div class="card bd"><div class="k">门禁模式</div>
-      <div class="metric" style="font-size:20px">${run.mode === 'warn' ? '警告不阻断' : '失败即阻断'}</div></div>
-    <div class="card bd"><div class="k">语义类用例占比</div>
+      <div class="tiny muted">${esc(run.release)} · ${run.passed}/${run.total} 通过</div>
+    </div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">门禁模式</div>
+      <div class="metric" style="font-size:20px">${run.mode === 'warn' ? '警告不阻断' : '失败即阻断'}</div>
+    </div>
+    <div class="card bd" style="padding:var(--s4)">
+      <div class="k">语义类用例占比</div>
       <div class="metric">${Math.round(allCases.filter(c => ['FM-07','FM-08','FM-09'].includes(c.fm)).length / allCases.length * 100)}%</div>
-      <div class="tiny muted">FM-07/08/09 三类</div></div>
+      <div class="tiny muted">FM-07/08/09 三类</div>
+    </div>
   </div>
 
   <div class="card mb16 gatewarn" id="gatewarn">
@@ -830,8 +905,11 @@ function renderCheckup(){
   <div class="grid g3 mb16">
     ${CHECKUP.map(c => `
       <div class="card bd chk ${c.status}">
-        <div class="chkhd"><b>${esc(c.name)}</b>${tag(c.status === 'ok' ? 't-ok' : c.status === 'warn' ? 't-warn' : 't-gray',
-          c.status === 'ok' ? '正常' : c.status === 'warn' ? '需处理' : '未采集')}</div>
+        <div class="chkhd">
+          <b>${esc(c.name)}</b>
+          ${tag(c.status === 'ok' ? 't-ok' : c.status === 'warn' ? 't-warn' : 't-gray',
+            c.status === 'ok' ? '正常' : c.status === 'warn' ? '需处理' : '未采集')}
+        </div>
         <div class="metric" style="font-size:22px">${esc(c.value)}</div>
         <div class="small muted">${esc(c.detail)}</div>
         ${c.fix ? `<button class="btn tiny mt10" onclick="toggleFix('fix-${esc(c.key)}')">${icon('file')}查看修复指引</button>
@@ -848,12 +926,11 @@ function renderCheckup(){
       <tbody>
         <tr><td class="mono">LLM</td><td class="mono small">input/output_payload, token</td><td class="small">模型调用还原</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-05</td></tr>
         <tr><td class="mono">TOOL</td><td class="mono small">args, result, http_status</td><td class="small">工具契约校验</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-02 / FM-03</td></tr>
-        <tr><td class="mono">RETRIEVAL</td><td class="mono small">query, result_count</td><td class="small">空结果判定</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-04</td></tr>
-        <tr class="t2row"><td class="mono">RETRIEVAL</td><td class="mono small">top_k 明细, score, doc_version, effective_date</td><td class="small">排序漂移与版本时效判定</td><td>${tag('t-gray','T2 设计中')}</td><td class="small"><b>FM-07</b></td></tr>
-        <tr class="t2row"><td class="mono">STATE</td><td class="mono small">entities, turn_index, supersedes, writer/reader</td><td class="small">上下文冲突消解</td><td>${tag('t-gray','T2 设计中')}</td><td class="small"><b>FM-08</b></td></tr>
-        <tr class="t2row"><td class="mono">TOOL</td><td class="mono small">idempotency_key, req_id, retry_of</td><td class="small">重试幂等性判定</td><td>${tag('t-gray','T2 设计中')}</td><td class="small"><b>FM-09</b></td></tr>
-        <tr class="t2row"><td class="mono">MEMORY</td><td class="mono small">key, version, written_at, expiry</td><td class="small">快照时效判定</td><td>${tag('t-gray','T2 设计中')}</td><td class="small">FM-01</td></tr>
-        <tr class="t2row"><td class="mono">HANDOFF</td><td class="mono small">source/target_agent, contract</td><td class="small">跨 Agent 交接校验</td><td>${tag('t-gray','T2 设计中')}</td><td class="small">FM-06</td></tr>
+        <tr><td class="mono">RETRIEVAL</td><td class="mono small">query, result_count, top_k, score, doc_version</td><td class="small">检索质量判定</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-04 / FM-07</td></tr>
+        <tr><td class="mono">STATE</td><td class="mono small">entities, turn_index, context_snapshot</td><td class="small">上下文一致性</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-08</td></tr>
+        <tr><td class="mono">TOOL</td><td class="mono small">idempotency_key, req_id, retry_of</td><td class="small">重试幂等性判定</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-09</td></tr>
+        <tr><td class="mono">MEMORY</td><td class="mono small">key, version, written_at</td><td class="small">快照时效判定</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-01</td></tr>
+        <tr><td class="mono">HANDOFF</td><td class="mono small">source/target_agent, contract</td><td class="small">跨 Agent 交接校验</td><td>${tag('t-ok','已采集')}</td><td class="small">FM-06</td></tr>
       </tbody>
     </table>
   </div>`;
@@ -917,12 +994,23 @@ let lastFocusBeforeModal = null;
 
 function openModal(title, body, footer){
   lastFocusBeforeModal = document.activeElement;
+
+  // 处理 footer：支持字符串或按钮数组
+  let footerHtml = '';
+  if (typeof footer === 'string') {
+    footerHtml = footer;
+  } else if (Array.isArray(footer)) {
+    footerHtml = footer.map(btn =>
+      `<button class="${btn.cls}" onclick="${btn.act}">${btn.label}</button>`
+    ).join('');
+  }
+
   $('modalRoot').innerHTML = `
     <div class="mask show" onclick="if(event.target===this)closeModal()">
       <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
         <div class="mh"><b>${esc(title)}</b><button class="mx" onclick="closeModal()" aria-label="关闭">${icon('x')}</button></div>
         <div class="mb">${body}</div>
-        <div class="mf">${footer}</div>
+        <div class="mf">${footerHtml}</div>
       </div>
     </div>`;
   enhanceKeyboard();

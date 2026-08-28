@@ -112,7 +112,7 @@ li{margin:3px 0}
 
 .mono{font-family:var(--font-mono);font-variant-ligatures:none;font-size:.94em;letter-spacing:-.01em}
 .small{font-size:12.5px}
-.tiny{font-size:11.5px;line-height:1.5}
+.tiny{font-size:11.5px;line-height:1.6;font-weight:400}
 .muted{color:var(--text-3)}
 .mb10{margin-bottom:var(--s2)}
 .mb16{margin-bottom:var(--s4)}
@@ -244,11 +244,20 @@ table{border-collapse:collapse;width:100%}
 .card .bd{padding:var(--s4)}
 
 .metric{
-  margin:var(--s1) 0 2px;
-  font-size:25px;font-weight:700;line-height:1.2;letter-spacing:-.02em;
+  margin:var(--s2) 0 var(--s1);
+  font-size:28px;
+  font-weight:700;
+  line-height:1.15;
+  letter-spacing:-.03em;
   color:var(--text);
 }
-.k{margin-bottom:2px;font-size:11.5px;font-weight:500;color:var(--text-3)}
+.k{
+  margin-bottom:4px;
+  font-size:12px;
+  font-weight:550;
+  color:var(--text-2);
+  line-height:1.4;
+}
 .v{font-size:13.5px;font-weight:600;color:var(--text)}
 
 .empty{
@@ -777,15 +786,17 @@ tr.t2row td b{color:var(--warn)}
 }
 
 /* ===== 18. Checkup ===== */
-.chk{display:flex;flex-direction:column}
+.chk{display:flex;flex-direction:column;padding:var(--s4)}
 .chk.ok{border-top:2px solid var(--ok)}
 .chk.warn{border-top:2px solid var(--warn-accent)}
 .chk.gray{border-top:2px solid var(--line-strong)}
 .chkhd{
-  display:flex;align-items:flex-start;justify-content:space-between;
-  gap:var(--s2);margin-bottom:var(--s1);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:var(--s3);margin-bottom:var(--s2);min-height:28px;
 }
-.chkhd b{min-width:0;font-size:13.5px;line-height:1.45}
+.chkhd b{min-width:0;font-size:14px;line-height:1.3;font-weight:650}
+.chk .metric{margin:var(--s2) 0;font-size:26px;font-weight:700;line-height:1.2}
+.chk .small{font-size:12px;line-height:1.6;color:var(--text-2)}
 .fixbox{
   margin-top:var(--s3);padding:var(--s3);
   background:var(--surface-2);

@@ -3,15 +3,15 @@
 
 /* ============ 九类故障分类 ============ */
 const FAILURE_TYPES = [
-  { code:'FM-01', key:'STALE_STATE',        name:'状态与记忆过期',  path:'规则（快照时效阈值）+ 因果读写边', stage:'T2 设计中',     cheapFix:'有（TTL + 变更订阅）',  count:12, trend:+5,  sessions:9  },
-  { code:'FM-02', key:'CONTRACT',           name:'步骤契约异常',    path:'规则（必填字段、类型校验）',       stage:'T1 已实现',     cheapFix:'有（Schema 校验）',     count:7,  trend:0,   sessions:6  },
-  { code:'FM-03', key:'TOOL_CALL',          name:'工具调用异常',    path:'规则（异常传播、超时）',           stage:'T1 已实现',     cheapFix:'有（重试与熔断）',      count:5,  trend:-3,  sessions:4  },
-  { code:'FM-04', key:'RETRIEVAL_EMPTY',    name:'检索结果为空',    path:'规则（空结果集）',                 stage:'T1 已实现',     cheapFix:'有（兜底话术）',        count:4,  trend:-1,  sessions:3  },
-  { code:'FM-05', key:'MODEL_OUTPUT',       name:'模型输出异常',    path:'规则（输出契约）+ 模型语义',       stage:'T1 部分实现',   cheapFix:'部分（输出 Schema）',   count:3,  trend:0,   sessions:3  },
-  { code:'FM-06', key:'ORCHESTRATION',      name:'编排与路由异常',  path:'规则（状态机不变量）',             stage:'T2 设计中',     cheapFix:'有（路由表校验）',      count:2,  trend:-1,  sessions:2  },
-  { code:'FM-07', key:'RETRIEVAL_DRIFT',    name:'检索排序漂移',    path:'因果图 + 检索集 Diff + 模型语义', stage:'T2 设计中',     cheapFix:'无',                    count:37, trend:+37, sessions:37, hero:true },
-  { code:'FM-08', key:'CONTEXT_CONFLICT',   name:'多轮上下文冲突',  path:'上下文快照 Diff + 模型语义',       stage:'T2 设计中',     cheapFix:'无',                    count:11, trend:+4,  sessions:11, hero:true },
-  { code:'FM-09', key:'RETRY_AMPLIFICATION',name:'重试状态放大',    path:'因果图（写幂等性）+ 外部对账',     stage:'T2 设计中',     cheapFix:'无',                    count:6,  trend:+2,  sessions:6,  hero:true },
+  { code:'FM-01', key:'STALE_STATE',        name:'状态与记忆过期',  path:'规则（快照时效阈值）+ 因果读写边', count:12, trend:+5,  sessions:9  },
+  { code:'FM-02', key:'CONTRACT',           name:'步骤契约异常',    path:'规则（必填字段、类型校验）',       count:7,  trend:0,   sessions:6  },
+  { code:'FM-03', key:'TOOL_CALL',          name:'工具调用异常',    path:'规则（异常传播、超时）',           count:5,  trend:-3,  sessions:4  },
+  { code:'FM-04', key:'RETRIEVAL_EMPTY',    name:'检索结果为空',    path:'规则（空结果集）',                 count:4,  trend:-1,  sessions:3  },
+  { code:'FM-05', key:'MODEL_OUTPUT',       name:'模型输出异常',    path:'规则（输出契约）+ 模型语义',       count:3,  trend:0,   sessions:3  },
+  { code:'FM-06', key:'ORCHESTRATION',      name:'编排与路由异常',  path:'规则（状态机不变量）',             count:2,  trend:-1,  sessions:2  },
+  { code:'FM-07', key:'RETRIEVAL_DRIFT',    name:'检索排序漂移',    path:'因果图 + 检索集 Diff + 模型语义', count:37, trend:+37, sessions:37, hero:true },
+  { code:'FM-08', key:'CONTEXT_CONFLICT',   name:'多轮上下文冲突',  path:'上下文快照 Diff + 模型语义',       count:11, trend:+4,  sessions:11, hero:true },
+  { code:'FM-09', key:'RETRY_AMPLIFICATION',name:'重试状态放大',    path:'因果图（写幂等性）+ 外部对账',     count:6,  trend:+2,  sessions:6,  hero:true },
 ];
 
 /* ============ 运行记录（12 条 Trace） ============ */
@@ -464,11 +464,6 @@ const CHECKUP = [
     detail:'user_phone 与 id_card 在 payload 中明文出现；已配置掩码规则但未对历史数据回溯',
     fix:['对新增数据已生效掩码：phone → 138****5678',
          '历史数据回溯任务需人工确认后执行（涉及 4,201 条 Trace）'] },
-  { key:'t2', name:'T2 语义字段', value:'未采集', status:'gray',
-    detail:'STATE / HANDOFF / MEMORY 三类语义事件的采集与注解 API 本期只留定义，未接入。FM-07/08/09 三类的诊断依赖这些字段，因此在真实态 Demo 中不可用，演示原型使用录制样本',
-    fix:['T2 迭代计划：先接入 STATE 读写事件（覆盖 FM-08）',
-         '再接入 RETRIEVAL 结果集快照（覆盖 FM-07）',
-         '最后接入工具调用幂等键与外部对账钩子（覆盖 FM-09）'] },
 ];
 
 /* ============ 答辩用统计（供 Chart.js） ============ */

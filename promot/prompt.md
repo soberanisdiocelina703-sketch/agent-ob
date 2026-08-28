@@ -30,3 +30,9 @@
 "D:\Projects\Agent-Tracing\midterm\index.html"保留现有内容的基础上，去除第三周的任务，中期只展示前两周的成果。前两周的任务都展示在html页面中，只是不重要的部分简单说。
 审查"D:\Projects\Agent-Tracing\midterm\prototype.html"文件格式，有的地方很简陋，修改完善，这是真正要上线的
 
+D:\Projects\Agent-Tracing\midterm\prototype.html，去掉T2设计中和低成本解法相关描述，近 24 小时运行，执行成功率，质量评估覆盖率，涉及事故，采集完整度断链检测重复上报敏感字段T2 语义字段，这些部分的字体和包裹不协调，界面不美观，修改
+
+故障类型如果不在这九类的怎么办，这九类是根据什么定义的，步骤类型呢
+规则包 v2026.08.3 · 模型 trace-judge-v4是什么意思
+
+"D:\Projects\Agent-Tracing\midterm\index.html，评审指出有低成本解法的案例撑不起「必须靠因果图」的价值主张，删掉这句话，去掉首页寻迹产品团队这段话。
