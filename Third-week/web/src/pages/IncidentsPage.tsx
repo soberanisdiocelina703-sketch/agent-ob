@@ -9,9 +9,9 @@ export function IncidentsPage() {
   const clusters = new Map<string, { title: string; count: number; sample: Incident }>();
   for (const i of incidents ?? []) {
     const key = i.cluster_title ?? "未聚类";
-    const cur = clusters.get(key);
-    if (cur) cur.count += 1;
-    else clusters.set(key, { title: key, count: i.cluster_count ?? 1, sample: i });
+    if (!clusters.has(key)) {
+      clusters.set(key, { title: key, count: i.cluster_count ?? 1, sample: i });
+    }
   }
 
   return (

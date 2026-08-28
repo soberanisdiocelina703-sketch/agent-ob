@@ -31,8 +31,8 @@ npm run check         # ruff + 80 项后端测试 + 覆盖率门槛
 
 ## 三条硬证据（评分快捷路径）
 
-1. **真实性**：`fixtures/raw/*.jsonl` 是 claude -p 的原始事件流存档（含一条权限被拒后
-   Agent 真实改变策略的轨迹）；`fixtures/*.contract.json` 由它转换（附脚本可重放）；
+1. **真实性**：`fixtures/raw/*.jsonl` 是 claude -p 的原始事件流存档；
+   `fixtures/*.contract.json` 由它转换（附脚本可重放）；
 2. **诊断能力**：`.venv/Scripts/python -m pytest e2e -q` —— 5 步断言在真实录制数据上
    走通「入库→事故→诊断→复核→转用例→门禁」，静默故障定位到过期取数步骤；
 3. **诚实性**：DEMO.md §5 如实记录 bad-tool-args 未进 Top-3（2/3），成因与聚合策略

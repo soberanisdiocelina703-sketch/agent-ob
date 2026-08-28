@@ -95,6 +95,3 @@ cd web && npm test  # 前端 Vitest + RTL + MSW（4 项）
 .venv/Scripts/python agent/run_agent.py --inject bad-tool-args --archive fixtures/raw/bad-tool-args.jsonl
 .venv/Scripts/python scripts/convert_fixtures.py
 ```
-
-fixtures/raw/permission-denied-sample.jsonl 是一条被权限墙拦截后 Agent 真实改变策略的
-轨迹样本（fetch 连拒 4 次后改用 Read 翻文件）——保留作为真实行为形态参考。

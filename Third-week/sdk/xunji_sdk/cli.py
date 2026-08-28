@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from .parser import StreamParser
@@ -43,18 +44,31 @@ def cmd_run(args, extra: list[str]) -> int:
     proc = subprocess.Popen(
         extra, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
-        text=True, encoding="utf-8", env={**os.environ},
+        text=True, encoding="utf-8", errors="replace", env={**os.environ},
     )
     if stdin_data is not None:
         assert proc.stdin is not None
         proc.stdin.write(stdin_data)
         proc.stdin.close()
+
+    # 后台线程排空 stderr，防止管道写满挂死
+    stderr_lines = []
+
+    def _drain_stderr():
+        assert proc.stderr is not None
+        for line in proc.stderr:
+            stderr_lines.append(line)
+
+    stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    stderr_thread.start()
+
     raw_lines = []
     assert proc.stdout is not None
     for line in proc.stdout:
         raw_lines.append(line)
         parser.feed_line(line)
     proc.wait()
+    stderr_thread.join(timeout=1)  # 等待 stderr 读完，最多 1s
     if archive:
         archive.write_text("".join(raw_lines), encoding="utf-8")
 
@@ -64,11 +78,18 @@ def cmd_run(args, extra: list[str]) -> int:
         "agent_version": args.agent_version, "run_name": args.run_name,
     })
     if not run.spans:
+        stderr_sample = "".join(stderr_lines)[:500] if stderr_lines else "<empty>"
         print(f"error: 未解析到任何 span（原始事件 {run.raw_events} 条）；"
-              f"被包装命令 stderr: {proc.stderr.read()[:500] if proc.stderr else ''}",
-              file=sys.stderr)
+              f"被包装命令 stderr: {stderr_sample}", file=sys.stderr)
         return 1
-    outcome = report(contract, server=args.server)
+
+    # 上报加容错：失败降级为警告，不影响 archive 已落盘
+    try:
+        outcome = report(contract, server=args.server)
+    except Exception as exc:
+        print(f"warning: 上报失败（{type(exc).__name__}: {exc}），但 trace 数据已存档到 {archive}",
+              file=sys.stderr)
+        outcome = {}
     print(json.dumps({"trace_id": run.trace_id, "spans": len(run.spans),
                       "accepted": outcome.get("accepted"),
                       "incidents": outcome.get("incidents")}, ensure_ascii=False))

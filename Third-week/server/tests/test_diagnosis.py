@@ -173,3 +173,47 @@ class TestEndToEnd:
         process_trace(conn, "t-f2", evaluator=MockEvaluator())
         clusters = conn.execute("SELECT id, count_24h FROM failure_clusters").fetchall()
         assert len(clusters) == 1 and clusters[0]["count_24h"] == 2
+
+
+class TestReviewModelStageRace:
+    def test_review_in_partial_window_survives_model_stage(self, conn):
+        """竞态回归：partial 窗口内提交的复核，模型阶段完成后不孤儿化。
+
+        时序：同步诊断（partial）→ 复核 Top-1（version 0→1）→ 模型阶段完成
+        断言：候选 ID 不变、version 保留为 1、verdict 仍指向存在的候选。
+        """
+        from xunji.diagnosis import run_model_stage, run_sync_diagnosis
+        from xunji.incidents import detect_incident
+        from xunji.review import submit_review
+
+        run_trace(conn, "t-base", GOOD)
+        run_trace(conn, "t-fail", STALE)
+        incident_id = detect_incident(conn, "t-fail")
+        incident = dict(conn.execute("SELECT * FROM incidents WHERE id=?",
+                                     (incident_id,)).fetchone())
+        diag_id = run_sync_diagnosis(conn, incident)  # status=partial
+
+        # partial 窗口内复核 Top-1
+        cands_before = load_candidates(conn, diag_id)
+        top1_id = cands_before[0]["id"]
+        outcome = submit_review(conn, top1_id, "confirmed", if_match=0)
+        assert outcome["candidate_version"] == 1
+
+        # 模型阶段完成（旧实现在这里删除重建候选 → verdict 孤儿）
+        run_model_stage(conn, diag_id, MockEvaluator())
+
+        # 候选 ID 不变、version 保留
+        survivor = conn.execute("SELECT * FROM candidates WHERE id=?", (top1_id,)).fetchone()
+        assert survivor is not None, "已复核候选在模型阶段后必须保留原 ID"
+        assert survivor["version"] == 1, "复核产生的版本号不得被模型阶段重置"
+
+        # verdict 不孤儿：其 candidate_id 仍指向存在的候选
+        verdict = conn.execute(
+            "SELECT * FROM verdicts WHERE candidate_id=? AND superseded_by IS NULL",
+            (top1_id,)).fetchone()
+        assert verdict is not None and verdict["result"] == "confirmed"
+
+        # If-Match 语义仍成立：基于旧版本的复核应 409
+        from xunji.review import ReviewConflict
+        with pytest.raises(ReviewConflict):
+            submit_review(conn, top1_id, "excluded", if_match=0)

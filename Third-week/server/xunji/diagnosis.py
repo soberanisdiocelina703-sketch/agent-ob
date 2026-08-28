@@ -69,25 +69,59 @@ def aggregate(raw_candidates: list[dict]) -> tuple[list[dict], int]:
 
 
 def _persist(conn: sqlite3.Connection, diagnosis_id: str, candidates: list[dict]) -> None:
-    conn.execute("DELETE FROM evidence WHERE candidate_id IN "
-                 "(SELECT id FROM candidates WHERE diagnosis_id=?)", (diagnosis_id,))
-    conn.execute("DELETE FROM candidates WHERE diagnosis_id=?", (diagnosis_id,))
+    """UPSERT 候选：保留既有 candidate ID 和 version，避免孤儿化已提交的 verdicts。"""
+    # 查出既有候选建 ID 映射：(span, cause) → (id, version)
+    existing_map = {}
+    for row in conn.execute(
+        "SELECT id, first_fault_span_id, cause_type, version FROM candidates WHERE diagnosis_id=?",
+        (diagnosis_id,)
+    ):
+        key = (row["first_fault_span_id"], row["cause_type"])
+        existing_map[key] = (row["id"], row["version"])
+
+    # 删除即将被替换的候选的证据（会重建），保留候选本身以维持 ID 稳定
+    cids_to_update = [existing_map[k][0] for k in existing_map]
+    if cids_to_update:
+        placeholders = ",".join("?" * len(cids_to_update))
+        conn.execute(f"DELETE FROM evidence WHERE candidate_id IN ({placeholders})", cids_to_update)
+
+    # 删除不在新排名中的候选（降级出 Top-3 的）
+    new_keys = {(c["first_fault_span_id"], c["cause_type"]) for c in candidates}
+    for key, (cid, _) in existing_map.items():
+        if key not in new_keys:
+            conn.execute("DELETE FROM evidence WHERE candidate_id=?", (cid,))
+            conn.execute("DELETE FROM candidates WHERE id=?", (cid,))
+
+    # UPSERT 候选：既有的 UPDATE（保留 version），新的 INSERT（version=0）
     for c in candidates:
-        cid = f"cand-{uuid.uuid4().hex[:8]}"
-        c["id"] = cid
-        conn.execute(
-            """INSERT INTO candidates (id, diagnosis_id, rank, cause_type, summary, raw_score,
-               evidence_grade, source, first_fault_span_id, causal_path, version)
-               VALUES (?,?,?,?,?,?,?,?,?,?,0)""",
-            (cid, diagnosis_id, c["rank"], c["cause_type"], c["summary"], c["raw_score"],
-             c["evidence_grade"], c["source"], c["first_fault_span_id"],
-             json.dumps(c.get("causal_path", []))),
-        )
+        key = (c["first_fault_span_id"], c["cause_type"])
+        if key in existing_map:
+            cid, version = existing_map[key]
+            c["id"] = cid  # 保留既有 ID
+            conn.execute(
+                """UPDATE candidates SET rank=?, summary=?, raw_score=?, evidence_grade=?,
+                   source=?, causal_path=? WHERE id=?""",
+                (c["rank"], c["summary"], c["raw_score"], c["evidence_grade"], c["source"],
+                 json.dumps(c.get("causal_path", [])), cid),
+            )
+        else:
+            cid = f"cand-{uuid.uuid4().hex[:8]}"
+            c["id"] = cid
+            conn.execute(
+                """INSERT INTO candidates (id, diagnosis_id, rank, cause_type, summary, raw_score,
+                   evidence_grade, source, first_fault_span_id, causal_path, version)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,0)""",
+                (cid, diagnosis_id, c["rank"], c["cause_type"], c["summary"], c["raw_score"],
+                 c["evidence_grade"], c["source"], c["first_fault_span_id"],
+                 json.dumps(c.get("causal_path", []))),
+            )
+
+        # 重建证据（已删旧证据）
         for e in c["evidence"]:
             conn.execute(
                 """INSERT INTO evidence (id, candidate_id, side, kind, span_ref, event_ref,
                    excerpt, weight) VALUES (?,?,?,?,?,?,?,?)""",
-                (f"ev-{uuid.uuid4().hex[:8]}", cid, e.get("side", "support"),
+                (f"ev-{uuid.uuid4().hex[:8]}", c["id"], e.get("side", "support"),
                  e.get("kind", "span_excerpt"), e.get("span_ref"), e.get("event_ref"),
                  e.get("excerpt", ""), e.get("weight", 1.0)),
             )
