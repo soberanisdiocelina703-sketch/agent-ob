@@ -37,6 +37,20 @@ agent/task_prompt.md，差异只来自 `XUNJI_INJECT` 环境变量（工具/数�
 npm run demo-offline   # 回放 fixtures/*.contract.json（真实录制转换，附录制脚本）
 ```
 
+## 2C. 对话演示（手动提问 → 真实执行 → Trace 同步产生）
+
+打开 http://localhost:5173/#/chat（侧栏「对话演示」）。输入任意问题并发送：
+
+- 每个问题被后端用 `xunji run` 包装为一次真实的 `claude -p` 执行（需已登录 CLI），
+  回答与执行链路同时产生——这是「接入即追踪」的现场演示；
+- **多轮对话**：每轮回答带回 claude 会话 ID，下一问自动用 `--resume` 续接同一会话
+  （头部显示「多轮会话 xxxx…」标签；点「新对话」重新开始）。每轮仍是独立 Trace，
+  一问一链路；
+- 回答气泡下方给出本次运行的 **trace_id（跳转运行记录）、步骤数、是否触发事故
+  （跳转诊断工作台）与耗时**；
+- 异常态：未安装/未登录 CLI 时显示错误气泡（不阻塞继续输入）；执行期间输入框
+  锁定并显示加载动画。
+
 ## 3. 演示走查（打开 http://localhost:5173）
 
 | 步骤 | 点什么 | 看到什么 | 截图 |
@@ -57,18 +71,21 @@ npm run demo-offline   # 回放 fixtures/*.contract.json（真实录制转换，
 | `--inject broken-contract` | agent/tools/reconcile.py | 输出信封与中间文件缺 discrepancies 字段；下游 write_report 数步后才崩 |
 | `--inject bad-tool-args` | data/payments_badtype.json | 上游导出金额为中文字符串；数据被忠实传递，reconcile 因非法参数失败 |
 
-## 5. 首故障点命中实录（真实运行 + E2E 双重验证，含未命中）
+## 5. 首故障点命中实录（真实运行 + E2E 双重验证）
+
+当前版本 **V2（v0.2.0）**，按「注入点步骤」口径 Top-3 命中 **3/3**：
 
 | 注入 | 注入点步骤 | Top-1 | 注入步骤是否进 Top-3 |
 |---|---|---|---|
 | stale-source | fetch_payments | **fetch_payments**（diff，generated_at/rows 分歧） | ✅ Top-1 |
 | broken-contract | reconcile | **reconcile**（rule，缺契约字段；报错处 write_report 列 rank2） | ✅ Top-1 |
-| bad-tool-args | fetch_payments（数据源退化） | reconcile（rule，入参非法 `payments[4].amount`） | ❌ 未进 Top-3 |
+| bad-tool-args | fetch_payments（数据源退化） | reconcile（rule，入参非法 `payments[4].amount`） | ✅ Top-3（diff 候选，V2 修复） |
 
-**如实结论**：按「注入点步骤」口径 Top-3 命中 **2/3**。bad-tool-args 的三个候选全部聚在
-reconcile（收到非法参数处）；证据摘录直指上游数据内容（"一千八百七十五元"），工程师可顺藤摸瓜，
-但系统未把 fetch_payments 列为候选——规则候选(1.0)将 Diff 候选(0.75)挤出 Top-3 所致。
-已记入技术复盘（docs/05 §问题 7）：聚合策略应保证「异构来源至少各留一席」。
+**V1 原始记录（如实保留）**：首次提交版命中 2/3——bad-tool-args 的三个候选全部聚在
+reconcile（收到非法参数处），规则候选(1.0)将指向源头的 Diff 候选(0.75)挤出 Top-3。
+该未命中作为测试反馈进入迭代闭环，V2 聚合器增加多样性约束（同 span 至多两席、
+rule/diff 各保底一席）后修复，回归无破坏。完整修复过程与回归结果见
+[docs/06-反馈迭代闭环.md](docs/06-反馈迭代闭环.md)，设计定性见 docs/05 问题 3。
 
 ## 6. 异常路径演示（对应 second-week/docs/06）
 
@@ -80,9 +97,9 @@ reconcile（收到非法参数处）；证据摘录直指上游数据内容（"�
 ## 7. 质量门禁
 
 ```bash
-npm run check       # ruff + 80 项测试 + 覆盖率 ≥80%（后端总体 94%）
+npm run check       # ruff + 98 项测试 + 覆盖率 ≥80%（server/xunji 94%）
 npm run test:e2e    # 离线态端到端冒烟（5 断言走通闭环）
-cd web && npm test  # 前端 Vitest + RTL + MSW（4 项）
+cd web && npm test  # 前端 Vitest + RTL + MSW（7 项）
 ```
 
 ## 8. 重录 fixtures（可重放刷新）

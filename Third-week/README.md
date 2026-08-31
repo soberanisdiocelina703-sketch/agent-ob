@@ -13,8 +13,12 @@ cd web && npm install && cd ..
 npm run demo          # 后端 :8756 + 前端 :5173
 npm run demo-run      # 真实态：本机 claude -p 现场执行（需已登录 CLI）
 npm run demo-offline  # 离线态：真实录制 fixtures 回放（无网可跑）
-npm run check         # ruff + 80 项后端测试 + 覆盖率门槛
+npm run check         # ruff + 98 项后端测试 + 覆盖率门槛
 ```
+
+启动后打开 http://localhost:5173/#/chat 可在「对话演示」页手动提问（支持多轮，
+`--resume` 续接同一会话）：每个问题被 `xunji run` 包装为一次真实 `claude -p` 执行，
+回答与 Trace 同步产生（接入即追踪）。
 
 逐步演示脚本（点什么、看到什么、截图）见 [DEMO.md](DEMO.md)。
 
@@ -24,19 +28,20 @@ npm run check         # ruff + 80 项后端测试 + 覆盖率门槛
 |---|---|---|---|---|
 | 1 | 技术方案设计 | [docs/01](docs/01-技术方案设计.md) · [specs/](specs/iter03-20260827-xunji-t1/) | 实施架构、选型表、目标→Demo 映射、不做项 | 完成 |
 | 2 | 接口/数据设计 | [docs/02](docs/02-接口与数据设计.md) · [api/openapi.yaml](api/openapi.yaml) · [schema.sql](server/xunji/schema.sql) | 11 接口字段级契约、12+2 表、枚举对照 | 完成 |
-| 3 | 核心功能编码 | [server/](server/) [sdk/](sdk/) [agent/](agent/) [web/](web/) · [docs/03](docs/03-代码结构说明.md) | 接入层→因果→规则→Diff→评估→聚合→复核→门禁→五页前端 | 完成 |
-| 4 | 代码质量 | [docs/04](docs/04-测试报告.md) | 84 项测试全绿；后端覆盖率 94%（核心模块 94–100%）；ruff/tsc 零违例 | 完成 |
-| 5 | 可运行 Demo | [DEMO.md](DEMO.md) · [e2e/](e2e/) · [fixtures/](fixtures/) | 双态一键运行；E2E 冒烟闭环；命中实录 2/3（含未命中，如实记录） | 完成 |
-| 6 | 技术复盘 | [docs/05](docs/05-技术复盘.md) · [retro-log.md](retro-log.md) | 7 项设计问题、8 条反哺清单（T1 收窄居首）、指标可测性 | 完成 |
+| 3 | 核心功能编码 | [server/](server/) [sdk/](sdk/) [agent/](agent/) [web/](web/) · [docs/03](docs/03-代码结构说明.md) | 接入层→因果→规则→Diff→评估→聚合→复核→门禁→五页工作台+对话演示页 | 完成 |
+| 4 | 代码质量 | [docs/04](docs/04-测试报告.md) | 105 项测试全绿；server/xunji 覆盖率 94%（核心模块 94–100%）；ruff/tsc 零违例 | 完成 |
+| 5 | 可运行 Demo | [DEMO.md](DEMO.md) · [e2e/](e2e/) · [fixtures/](fixtures/) | 双态一键运行；E2E 冒烟闭环；覆盖加载/成功/异常态 | 完成 |
+| 6 | 反馈迭代闭环 | [docs/06](docs/06-反馈迭代闭环.md) · [docs/05 复盘](docs/05-技术复盘.md) · [retro-log.md](retro-log.md) | 6 条反馈问题记录；关键问题（聚合多样性）V2 修复；命中实录 2/3 → 3/3 回归全绿 | 完成 |
 
 ## 三条硬证据（评分快捷路径）
 
 1. **真实性**：`fixtures/raw/*.jsonl` 是 claude -p 的原始事件流存档；
    `fixtures/*.contract.json` 由它转换（附脚本可重放）；
 2. **诊断能力**：`.venv/Scripts/python -m pytest e2e -q` —— 5 步断言在真实录制数据上
-   走通「入库→事故→诊断→复核→转用例→门禁」，静默故障定位到过期取数步骤；
-3. **诚实性**：DEMO.md §5 如实记录 bad-tool-args 未进 Top-3（2/3），成因与聚合策略
-   修改建议在 docs/05 问题 3。
+   走通「入库→事故→诊断→复核→转用例→门禁」，三类注入的注入点步骤全部进 Top-3；
+3. **迭代闭环**：V1 如实记录 bad-tool-args 未命中（2/3）→ 定性为聚合多样性缺失
+   （docs/05 问题 3）→ V2 修复并新增 5 处回归断言 → 3/3；V1 原始记录保留在
+   DEMO.md §5，全过程见 docs/06。
 
 ## 范围声明
 

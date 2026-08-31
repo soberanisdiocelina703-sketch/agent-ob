@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTraceDetail, useTraces } from "../hooks/useXunji";
 import { StatusTag } from "../components/StatusTag";
+import { Icon } from "../components/Icon";
 
 const KIND_TAG: Record<string, string> = {
   llm_call: "t-model", tool_call: "t-ok", retrieval: "t-brand",
@@ -29,28 +30,28 @@ export function RunsPage() {
 
   return (
     <div className="page-in">
-      <div className="grid g4 mb10">
+      <div className="grid g4 mb16">
         <div className="card bd">
-          <div className="small muted">运行总数</div>
+          <div className="k">运行总数</div>
           <div className="metric">{total}</div>
-          <div className="small muted">对账 Agent · 演示数据</div>
+          <div className="tiny muted">对账 Agent + 对话演示 · 真实数据</div>
         </div>
         <div className="card bd">
-          <div className="small muted">执行成功率</div>
+          <div className="k">执行成功率</div>
           <div className="metric" style={{ color: "var(--ok)" }}>
             {total ? Math.round((succ / total) * 100) : 0}%
           </div>
-          <div className="small muted">只表示技术执行状态</div>
+          <div className="tiny muted">只表示技术执行状态</div>
         </div>
         <div className="card bd">
-          <div className="small muted">质量不通过</div>
+          <div className="k">质量不通过</div>
           <div className="metric" style={{ color: "var(--warn)" }}>{qfail}</div>
-          <div className="small muted">执行成功也可能质量不通过</div>
+          <div className="tiny muted">执行成功也可能质量不通过</div>
         </div>
         <div className="card bd">
-          <div className="small muted">涉及事故</div>
+          <div className="k">涉及事故</div>
           <div className="metric" style={{ color: "var(--bad)" }}>{withInc}</div>
-          <div className="small muted">点击行进入排障</div>
+          <div className="tiny muted">点击行查看详情与诊断入口</div>
         </div>
       </div>
 
@@ -65,7 +66,9 @@ export function RunsPage() {
           <option value="">质量结论：全部</option>
           <option value="pass">通过</option>
           <option value="failed">不通过</option>
+          <option value="unevaluated">未评估</option>
         </select>
+        <span className="small muted">每 5s 自动刷新</span>
       </div>
 
       <div className="card">
@@ -76,14 +79,17 @@ export function RunsPage() {
         <div className="hd">
           <b>运行记录</b>
           <span className="tag t-gray">{total} 条</span>
-          <span className="small muted">真实 Claude Code 运行 · 每 5s 自动刷新</span>
         </div>
         {isLoading ? (
           <div className="empty">加载中…</div>
         ) : !traces?.length ? (
-          <div className="empty">暂无运行数据 — 执行 npm run demo-run 或 demo-offline</div>
+          <div className="empty">
+            <Icon name="activity" className="lg" />
+            暂无运行数据
+            <span className="tiny">执行 npm run demo-run（真实态）或 demo-offline（离线态）灌入数据</span>
+          </div>
         ) : (
-          <table>
+          <table className="dt">
             <thead>
               <tr>
                 <th>Trace ID</th><th>执行状态</th><th>质量结论</th><th>Agent</th>
@@ -92,20 +98,31 @@ export function RunsPage() {
             </thead>
             <tbody>
               {traces.map((t) => (
-                <tr key={t.trace_id} className="click" onClick={() => setSelected(t.trace_id)}>
+                <tr
+                  key={t.trace_id}
+                  className={`click${selected === t.trace_id ? " sel" : ""}`}
+                  tabIndex={0}
+                  onClick={() => setSelected(t.trace_id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelected(t.trace_id);
+                    }
+                  }}
+                >
                   <td className="mono"><b>{t.trace_id}</b></td>
                   <td>
-                    <span className={`run-status ${t.execution_status === "success" ? "success" : "failed"}`}>
+                    <span className={`rs ${t.execution_status === "success" ? "success" : "failed"}`}>
                       {t.execution_status === "success" ? "成功" : "失败"}
                     </span>
                   </td>
                   <td><StatusTag value={t.quality_verdict} /></td>
                   <td>{t.agent_id}</td>
                   <td className="mono small">{t.agent_version}</td>
-                  <td>{t.span_count}</td>
+                  <td className="mono">{t.span_count}</td>
                   <td>
                     {t.incident_id ? (
-                      <a href={`#/incidents/${t.incident_id}`}>
+                      <a href={`#/incidents/${t.incident_id}`} onClick={(e) => e.stopPropagation()}>
                         <span className="tag t-bad">{t.incident_id}</span>
                       </a>
                     ) : (
@@ -124,32 +141,42 @@ export function RunsPage() {
           <div className="hd">
             <b>Trace 详情</b>
             <span className="mono muted small">{detail.trace_id}</span>
+            <span className="tag t-gray">{detail.spans.length} 步骤</span>
             {detail.incident_id && (
-              <a href={`#/incidents/${detail.incident_id}`} style={{ marginLeft: "auto" }}>
-                打开诊断工作台 →
-              </a>
+              <span className="sp">
+                <a className="btn sm" href={`#/incidents/${detail.incident_id}`}>
+                  打开诊断工作台<Icon name="arrowRight" />
+                </a>
+              </span>
             )}
           </div>
-          <div className="bd ttree">
-            {detail.spans.map((s) => {
+          <div className="tree">
+            {detail.spans.map((s, idx) => {
               const bad = s.execution_status !== "success";
               const qbad = s.quality_verdict === "failed";
               return (
-                <div key={s.span_id} className={`trow${bad ? " hlbad" : qbad ? " hl" : ""}`}>
+                <div key={s.span_id} className={`trow${bad ? " fault" : qbad ? " symptom" : ""}`}>
+                  <span className="ind" aria-hidden="true">{s.parent_span_id ? "└─" : "──"}</span>
+                  <span className="sid">#{idx + 1}</span>
                   <span className={`tag kind ${KIND_TAG[s.step_type] ?? "t-gray"}`}>
                     {KIND_LABEL[s.step_type] ?? s.step_type}
                   </span>
-                  <span>
-                    {s.step_name}
+                  <span className="sname">
+                    <b>{s.step_name}</b>
                     {s.link_kind === "broken_parent" && (
                       <span className="tag t-warn" style={{ marginLeft: 6 }}>断链</span>
                     )}
-                  </span>
-                  <span className="mono muted small" style={{ maxWidth: 520, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {(s.output_payload ?? "").slice(0, 110)}
+                    {(s.output_payload ?? "") && (
+                      <span className="mono muted tiny" style={{ display: "block" }}>
+                        {(s.output_payload ?? "").slice(0, 130)}
+                      </span>
+                    )}
                   </span>
                   <span className="dur">
-                    <StatusTag value={bad ? s.execution_status : s.quality_verdict === "unevaluated" ? "success" : s.quality_verdict} />
+                    <StatusTag
+                      value={bad ? s.execution_status
+                        : s.quality_verdict === "unevaluated" ? "success" : s.quality_verdict}
+                    />
                   </span>
                 </div>
               );

@@ -1,5 +1,6 @@
 import { useIncidents } from "../hooks/useXunji";
 import { StatusTag } from "../components/StatusTag";
+import { Icon } from "../components/Icon";
 import type { Incident } from "../api/types";
 
 /** 事故列表：失败模式簇卡片 + 事故表（docs/01 步骤 2） */
@@ -17,19 +18,20 @@ export function IncidentsPage() {
   return (
     <div className="page-in">
       {clusters.size > 0 && (
-        <div className="grid g4 mb10" style={{ marginBottom: 16 }}>
+        <div className="grid g4 mb16">
           {[...clusters.values()].slice(0, 4).map((c) => (
             <div key={c.title} className="card cluster">
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                <b style={{ fontSize: 13 }}>{c.title}</b>
+              <div className="ch">
+                <b>{c.title}</b>
                 <StatusTag value={c.sample.failure_type} />
               </div>
               <div className="cnt" style={{ color: "var(--bad)" }}>
                 {c.count}
-                <span className="small muted" style={{ fontWeight: 400 }}> 起</span>
+                <span className="tiny muted"> 起</span>
               </div>
-              <div className="small muted mt10">
-                簇由症状签名实时生成，非预设分类
+              <div className="cmeta">
+                最近事故 <b className="mono">{c.sample.id}</b>
+                <br />簇由症状签名实时生成，非预设分类
               </div>
             </div>
           ))}
@@ -48,9 +50,13 @@ export function IncidentsPage() {
         {isLoading ? (
           <div className="empty">加载中…</div>
         ) : !incidents?.length ? (
-          <div className="empty">暂无事故 — 一切正常，或先执行 npm run demo-offline 灌入演示数据</div>
+          <div className="empty">
+            <Icon name="check" className="lg" />
+            暂无事故 — 一切正常
+            <span className="tiny">或先执行 npm run demo-offline 灌入演示数据</span>
+          </div>
         ) : (
-          <table>
+          <table className="dt">
             <thead>
               <tr>
                 <th>事故 ID</th><th>失败模式簇</th><th>故障类型</th><th>症状步骤</th>
@@ -59,18 +65,32 @@ export function IncidentsPage() {
             </thead>
             <tbody>
               {incidents.map((i) => (
-                <tr key={i.id} className="click"
-                    onClick={() => (location.hash = `#/incidents/${i.id}`)}>
+                <tr
+                  key={i.id}
+                  className="click"
+                  tabIndex={0}
+                  onClick={() => (location.hash = `#/incidents/${i.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      location.hash = `#/incidents/${i.id}`;
+                    }
+                  }}
+                >
                   <td className="mono"><b>{i.id}</b></td>
                   <td>
                     {i.cluster_title}
-                    <div className="small muted">簇内 {i.cluster_count} 起</div>
+                    <div className="tiny muted">簇内 {i.cluster_count} 起</div>
                   </td>
                   <td><StatusTag value={i.failure_type} /></td>
                   <td className="mono small">{i.symptom_span_id}</td>
                   <td><StatusTag value={i.evidence_grade} /></td>
                   <td><StatusTag value={i.review_status} /></td>
-                  <td><a href={`#/incidents/${i.id}`}>诊断 →</a></td>
+                  <td>
+                    <a href={`#/incidents/${i.id}`} onClick={(e) => e.stopPropagation()}>
+                      诊断 →
+                    </a>
+                  </td>
                 </tr>
               ))}
             </tbody>
