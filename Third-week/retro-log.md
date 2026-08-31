@@ -13,3 +13,4 @@
 - 2026-08-21 | 接入 | bypassPermissions 被会话安全分类器正确拒绝（全局绕过越权）；probe 发现 Windows 下嵌套 Claude Code 的终端工具名是 PowerShell 而非 Bash，窄授权规则须写 PowerShell(python:*) | 双规则并列 PowerShell/Bash；反哺：接入文档与体检必须覆盖「工具名随平台变化」
 - 2026-08-21 | diffgen | 真实录制暴露：assistant 文本每次运行必然漂移，Diff 把 llm_call 当首分歧（伪根因） | 对照排除 llm_call/planning 步骤，加回归测试；反哺：docs/08 Diff 设计需写明步骤类型过滤
 - 2026-08-21 | gate | docs/08 §8.2 gate-run 未定义评估范围（只说重放回归集）；E2E 实测「只看 release 最新一次运行」会漏掉更早运行中的复现 | 改为评估该 release 全部运行（上限 20），任一违例即不过；反哺：门禁 PRD 需锁定评估窗口口径
+- 2026-08-31 | 聚合 | V2 迭代：实现 docs/05 问题 3 提案时，真实候选池验证发现「三来源各保底一席」会让 model(0.35) 挤掉字段级规则证据卡（tool_arg_violation）——提案本身需要修正 | 落地为「同 span ≤2 席 + rule/diff 保底 + model 只补位」；命中实录 2/3→3/3；决策全文见 docs/06

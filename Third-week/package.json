@@ -1,7 +1,7 @@
 {
   "name": "xunji-third-week",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "寻迹 T1 通用流诊断最小闭环 — 一键命令入口",
   "scripts": {
     "demo": "python scripts/demo.py",

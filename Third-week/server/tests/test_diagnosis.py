@@ -85,6 +85,49 @@ class TestAggregate:
                           "model": "model_heuristic"}
 
 
+class TestAggregateDiversity:
+    """docs/05 问题 3 的 V2 修复：同 span 至多两席 + rule/diff 保底一席。"""
+
+    def test_same_span_capped_at_two_seats(self):
+        ranked, _ = aggregate([
+            cand("rule", "s1", "exception"), cand("rule", "s1", "tool_arg_violation"),
+            cand("rule", "s1", "output_contract_violation"), cand("rule", "s2", "timeout"),
+        ])
+        spans = [c["first_fault_span_id"] for c in ranked]
+        assert spans.count("s1") == 2 and "s2" in spans
+
+    def test_diff_guaranteed_seat_when_rules_monopolize_one_span(self):
+        """bad-tool-args 命中实录的最小复现：三条规则聚在同一下游步骤 +
+        一条规则在报错处，指向上游源头的 Diff 候选原本排第 5。"""
+        ranked, _ = aggregate([
+            cand("rule", "reconcile", "exception"),
+            cand("rule", "reconcile", "tool_arg_violation"),
+            cand("rule", "reconcile", "output_contract_violation"),
+            cand("rule", "write_report", "output_contract_violation"),
+            cand("diff", "fetch_payments", "quality_check_failed"),
+        ])
+        spans = [c["first_fault_span_id"] for c in ranked]
+        assert "fetch_payments" in spans, "Diff 候选必须保底一席（注入点上屏）"
+        assert ranked[0]["first_fault_span_id"] == "reconcile"  # 高分规则仍居首
+        causes = [c["cause_type"] for c in ranked]
+        assert "tool_arg_violation" in causes  # 字段级证据卡不被保底挤掉
+
+    def test_model_not_guaranteed_cannot_evict_deterministic(self):
+        ranked, _ = aggregate([
+            cand("rule", "s1", "exception"), cand("rule", "s2", "timeout"),
+            cand("diff", "s3", "quality_check_failed"),
+            cand("model", "s4", "quality_check_failed"),
+        ])
+        assert all(c["source"] != "model" for c in ranked)
+
+    def test_model_fills_free_seat_when_pool_is_small(self):
+        ranked, _ = aggregate([
+            cand("diff", "s1", "quality_check_failed"),
+            cand("model", "s2", "quality_check_failed"),
+        ])
+        assert {c["source"] for c in ranked} == {"diff", "model"}
+
+
 class TestValidateModelOutput:
     def _graph(self, conn):
         run_trace(conn, "t1", STALE)

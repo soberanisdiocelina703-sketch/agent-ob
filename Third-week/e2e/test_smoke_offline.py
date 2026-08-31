@@ -78,6 +78,11 @@ def test_04_bad_tool_args_rule_names_the_field(client):
     snap = diagnosis_of(client, inc)
     arg_cands = [c for c in snap["candidates"] if c["cause_type"] == "tool_arg_violation"]
     assert arg_cands and "amount" in arg_cands[0]["summary"]
+    # V2（反馈迭代闭环）：聚合多样性保底后，指向注入点（数据源退化处）的
+    # Diff 候选必须进 Top-3——V1 曾被三条同分规则候选挤出（命中实录 2/3）
+    steps = [step_of(client, "fx-bad-tool-args", c["first_fault_span_id"])
+             for c in snap["candidates"]]
+    assert "fetch_payments" in steps
 
 
 def test_05_review_convert_gate_closes_the_loop(client):

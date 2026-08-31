@@ -30,6 +30,48 @@ GRADE_BY_SOURCE = {
     CandidateSource.MODEL.value: EvidenceGrade.MODEL_HEURISTIC.value,
 }
 TOP_N = 3
+# 多样性截断（docs/05 问题 3 的 V2 修复，决策记录见 docs/06-反馈迭代闭环.md）：
+# 同一 first_fault_span 至多 MAX_PER_SPAN 席，防止多规则命中同一下游步骤时
+# 把指向上游源头的异构候选挤出 Top-N；rule/diff 各保底一席（若池中存在）。
+# model_heuristic 不参与保底——低置信补充解释只补空位，不得挤占确定性/对照证据。
+MAX_PER_SPAN = 2
+GUARANTEED_SOURCES = (CandidateSource.RULE.value, CandidateSource.DIFF.value)
+
+
+def _rank_key(c: dict) -> tuple:
+    return (-c["raw_score"], c.get("fault_ts") or "￿")
+
+
+def _select_diverse(pool: list[dict]) -> list[dict]:
+    """从按分数排好序的候选池中选出 Top-N，施加 span/来源多样性约束。"""
+    selected: list[dict] = []
+    for c in pool:
+        if len(selected) >= TOP_N:
+            break
+        same_span = sum(1 for s in selected
+                        if s["first_fault_span_id"] == c["first_fault_span_id"])
+        if same_span >= MAX_PER_SPAN:
+            continue
+        selected.append(c)
+
+    for source in GUARANTEED_SOURCES:
+        if any(c["source"] == source for c in selected):
+            continue
+        entrant = next((c for c in pool if c["source"] == source), None)
+        if entrant is None:
+            continue
+        if len(selected) < TOP_N:
+            selected.append(entrant)
+            continue
+        # 让位者：从队尾（分数最低）找「其来源已占多席」的候选；
+        # 各来源都只剩一席时保底不成立（不挤掉某来源的唯一代表）
+        victim = next((s for s in reversed(selected)
+                       if sum(1 for x in selected if x["source"] == s["source"]) > 1),
+                      None)
+        if victim is not None:
+            selected[selected.index(victim)] = entrant
+
+    return sorted(selected, key=_rank_key)
 
 
 def aggregate(raw_candidates: list[dict]) -> tuple[list[dict], int]:
@@ -61,8 +103,7 @@ def aggregate(raw_candidates: list[dict]) -> tuple[list[dict], int]:
         else:
             merged[key] = c
 
-    ranked = sorted(merged.values(),
-                    key=lambda c: (-c["raw_score"], c.get("fault_ts") or "￿"))[:TOP_N]
+    ranked = _select_diverse(sorted(merged.values(), key=_rank_key))
     for i, c in enumerate(ranked):
         c["rank"] = i + 1
     return ranked, dropped
