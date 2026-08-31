@@ -5,6 +5,7 @@
 """
 import asyncio
 import json
+import re
 import sqlite3
 from contextlib import asynccontextmanager
 
@@ -14,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from . import db as dbmod
+from . import chat
 from .diagnosis import load_candidates
 from .diffgen import compare_table, find_baseline
 from .gate import RegressionInvalid, create_regression_case, run_gate
@@ -202,6 +204,35 @@ def incident_diff(iid: str, baseline: str | None = None):
         return {"available": False, "reason": "no_baseline",
                 "message": "暂无可比成功基线；累积一次成功运行后 Diff 将启用"}
     return {"available": True, **compare_table(c, tid, baseline)}
+
+
+# ---------- 对话演示 ----------
+
+class ChatBody(BaseModel):
+    question: str
+    session_id: str | None = None  # 上一轮返回的 claude_session_id → 多轮续接
+
+
+@app.post("/v1/chat/messages", status_code=202)
+def post_chat_message(body: ChatBody):
+    """手动输入的问题 → 后台 `xunji run` 包装真实执行，返回 job_id 供轮询。"""
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(422, "问题不能为空")
+    if body.session_id and not re.fullmatch(r"[0-9a-fA-F-]{8,64}", body.session_id):
+        raise HTTPException(422, "session_id 格式非法")
+    import os
+
+    server = os.getenv("XUNJI_SELF_URL", "http://127.0.0.1:8756")
+    return {"job_id": chat.submit(question, server, body.session_id)}
+
+
+@app.get("/v1/chat/messages/{job_id}")
+def get_chat_message(job_id: str):
+    job = chat.get_job(job_id)
+    if job is None:
+        raise HTTPException(404, f"对话任务 {job_id} 不存在")
+    return job
 
 
 # ---------- 复核 / 回归 / 门禁 ----------

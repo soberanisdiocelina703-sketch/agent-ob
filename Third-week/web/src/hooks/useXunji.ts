@@ -79,3 +79,28 @@ export function useGateRun() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["suites"] }),
   });
 }
+
+export function useChatAsk() {
+  return useMutation({
+    mutationFn: (p: { question: string; sessionId: string | null }) =>
+      xunjiApi.chatAsk(p.question, p.sessionId),
+  });
+}
+
+/** 对话任务：running 期间每秒轮询，终态（done/error）后停止并刷新运行列表 */
+export function useChatJob(jobId: string | null) {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: ["chat-job", jobId],
+    queryFn: async () => {
+      const job = await xunjiApi.chatJob(jobId!);
+      if (job.status !== "running") {
+        qc.invalidateQueries({ queryKey: ["traces"] });
+      }
+      return job;
+    },
+    enabled: !!jobId,
+    refetchInterval: (query) =>
+      query.state.data && query.state.data.status !== "running" ? false : 1000,
+  });
+}

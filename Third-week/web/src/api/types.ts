@@ -100,3 +100,16 @@ export interface Suite {
   cases: { id: string; incident_id: string; invariants: string }[];
   recent_runs: { id: string; release: string; mode: string; result: string; created_at: string }[];
 }
+
+export interface ChatJob {
+  job_id: string;
+  status: "running" | "done" | "error";
+  question: string;
+  answer: string | null;
+  trace_id: string | null;
+  span_count: number | null;
+  incident_id: string | null;
+  error: string | null;
+  duration_ms: number | null;
+  claude_session_id: string | null;
+}

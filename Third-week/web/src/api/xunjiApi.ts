@@ -1,7 +1,7 @@
 /** API 层：路径与 docs/08 §8.2 逐字一致 */
 import { client } from "./client";
 import type {
-  Diagnosis, DiffView, Incident, Suite, TraceDetail, TraceSummary,
+  ChatJob, Diagnosis, DiffView, Incident, Suite, TraceDetail, TraceSummary,
 } from "./types";
 
 export const PROJECT = "recon-demo";
@@ -39,4 +39,11 @@ export const xunjiApi = {
 
   gateRun: async (suiteId: string, release: string, mode: string) =>
     (await client.post(`/v1/suites/${suiteId}/gate-run`, { release, mode })).data,
+
+  chatAsk: async (question: string, sessionId: string | null) =>
+    (await client.post<{ job_id: string }>("/v1/chat/messages",
+      { question, session_id: sessionId ?? undefined })).data,
+
+  chatJob: async (jobId: string) =>
+    (await client.get<ChatJob>(`/v1/chat/messages/${jobId}`)).data,
 };
