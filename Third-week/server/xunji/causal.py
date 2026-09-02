@@ -106,3 +106,15 @@ def upstream_path(g: Graph, span_id: str) -> list[str]:
         seen.add(cur)
         stack.extend(incoming.get(cur, []))
     return [sid for sid in g.nodes if sid in seen]
+
+
+def path_between(g: Graph, src_id: str, dst_id: str) -> list[str]:
+    """首故障点→症状的传播展示序列：两点之间的完整执行链段（含两端），
+    按时间序——期间执行的每个步骤都展示，读者能看到故障如何一步步传导。
+    端点缺失时只留存在的一端；同一步骤（故障即症状）为单节点。"""
+    if src_id not in g.spans or dst_id not in g.spans:
+        return [s for s in dict.fromkeys((src_id, dst_id)) if s in g.spans]
+    i, j = g.nodes.index(src_id), g.nodes.index(dst_id)
+    if i > j:
+        i, j = j, i
+    return g.nodes[i:j + 1]

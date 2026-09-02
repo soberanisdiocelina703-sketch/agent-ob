@@ -1,7 +1,7 @@
 import pytest
 
 from xunji import db
-from xunji.causal import build_graph, upstream_path
+from xunji.causal import build_graph, path_between, upstream_path
 from xunji.ingestion import ingest
 
 RESOURCE = {"project_id": "p1", "agent_id": "a1", "agent_version": "1", "run_name": "r"}
@@ -78,3 +78,37 @@ def test_upstream_path_returns_causal_ancestors_time_ordered(conn):
     g = build_graph(conn, "t1")
     path = upstream_path(g, "validate")
     assert path == ["fetch", "recon", "validate"]
+
+
+class TestPathBetween:
+    """因果传播展示路径：从首故障点起步、到症状收尾，中间执行的每一步
+    都完整展示（页面可读性 bug 回归）。"""
+
+    def _linked(self, conn):
+        ingest(conn, {"resource": RESOURCE, "spans": [
+            span("root", None, 0),
+            span("fetch", "root", 1, out={"ref": "DATA-FRAGMENT-99"}),
+            span("recon", "root", 3, inp={"ref": "DATA-FRAGMENT-99"},
+                 out={"report": "RPT-778899"}),
+            span("validate", "root", 6, inp={"report": "RPT-778899"}),
+        ]})
+        return build_graph(conn, "t1")
+
+    def test_完整链段_不含首故障之前的根span(self, conn):
+        g = self._linked(conn)
+        assert path_between(g, "fetch", "validate") == ["fetch", "recon", "validate"]
+
+    def test_中间步骤即使无因果边也展示(self, conn):
+        ingest(conn, {"resource": RESOURCE, "spans": [
+            span("a", None, 0), span("mid", None, 3), span("b", None, 5),
+        ]})
+        g = build_graph(conn, "t1")
+        assert path_between(g, "a", "b") == ["a", "mid", "b"]
+
+    def test_故障即症状_单节点(self, conn):
+        g = self._linked(conn)
+        assert path_between(g, "validate", "validate") == ["validate"]
+
+    def test_端点缺失_只留存在的(self, conn):
+        g = self._linked(conn)
+        assert path_between(g, "ghost", "validate") == ["validate"]

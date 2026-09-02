@@ -11,7 +11,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from .causal import build_graph, upstream_path
+from .causal import build_graph, path_between
 from .diffgen import find_baseline, generate_diff_finding
 from .enums import CandidateSource, DiagnosisStatus, EvidenceGrade
 from .evaluator import EvaluatorError
@@ -189,7 +189,7 @@ def run_sync_diagnosis(conn: sqlite3.Connection, incident: dict) -> str:
             "summary": f.summary, "first_fault_span_id": f.first_fault_span_id,
             "evidence": f.evidence,
             "fault_ts": g.spans.get(f.first_fault_span_id, {}).get("ts"),
-            "causal_path": upstream_path(g, symptom) if symptom in g.spans else [],
+            "causal_path": path_between(g, f.first_fault_span_id, symptom),
         })
 
     span0 = g.spans.get(g.nodes[0]) if g.nodes else None
@@ -203,7 +203,7 @@ def run_sync_diagnosis(conn: sqlite3.Connection, incident: dict) -> str:
             "source": CandidateSource.DIFF.value, "cause_type": finding.cause_type,
             "summary": finding.summary, "first_fault_span_id": finding.first_fault_span_id,
             "evidence": finding.evidence,
-            "causal_path": upstream_path(g, symptom) if symptom in g.spans else [],
+            "causal_path": path_between(g, finding.first_fault_span_id, symptom),
         })
 
     ranked, dropped = aggregate(raw)
