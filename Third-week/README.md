@@ -13,12 +13,14 @@ cd web && npm install && cd ..
 npm run demo          # 后端 :8756 + 前端 :5173
 npm run demo-run      # 真实态：本机 claude -p 现场执行（需已登录 CLI）
 npm run demo-offline  # 离线态：真实录制 fixtures 回放（无网可跑）
-npm run check         # ruff + 98 项后端测试 + 覆盖率门槛
+npm run check         # ruff + 109 项后端测试 + 覆盖率门槛
 ```
 
-启动后打开 http://localhost:5173/#/chat 可在「对话演示」页手动提问（支持多轮，
-`--resume` 续接同一会话）：每个问题被 `xunji run` 包装为一次真实 `claude -p` 执行，
-回答与 Trace 同步产生（接入即追踪）。
+启动后两套前端共用同一后端与真实数据：
+**业务工作台** http://127.0.0.1:8756/proto/prototype.html（中期原型三件套逐字节
+复制、一处未改，`data.js` 由后端按原型数据契约实时生成——「依照前端、升级后端」）；
+**对话演示** http://127.0.0.1:8756/chat（手动提问 → `xunji run` 包装真实执行，
+多轮 `--resume` 续接，回答与 Trace 同步产生）。React 工作台 http://localhost:5173 保留。
 
 逐步演示脚本（点什么、看到什么、截图）见 [DEMO.md](DEMO.md)。
 

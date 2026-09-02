@@ -21,6 +21,18 @@ cd web && npm install && cd ..          # 国内网络加 --registry https://reg
 npm run demo        # 后端 :8756 + 前端 :5173
 ```
 
+启动后有**两套前端**（同一后端、同一数据）：
+
+| 入口 | 定位 | 说明 |
+|---|---|---|
+| http://127.0.0.1:8756/proto/prototype.html | **业务工作台（主推）** | 中期原型三件套逐字节复制（一处未改），`data.js` 由后端按其数据契约从真实库实时生成；覆盖运行/Trace/事故/工作台/Diff/复核/门禁/体检/设置九页 |
+| http://127.0.0.1:8756/chat | **对话演示（独立界面）** | 手动提问 → `xunji run` 包装真实执行 → 回答与 Trace 同步产生，多轮 `--resume` 续接；复用原型 CSS 设计系统 |
+| http://localhost:5173 | React 工作台（保留） | 五页真实数据前端 + 对话演示路由页 |
+
+原型九类故障（FM-01~09）是产品叙事口径；`/proto/data.js` 生成器把 T1 六类真实
+failure_type 映射为 FM-EX/ARG/CT/TO/RE/QC 六个代号，映射口径在
+`server/xunji/protodata.py` 头注释如实声明。
+
 ## 2A. 真实态（主路径）
 
 ```bash
@@ -97,7 +109,7 @@ rule/diff 各保底一席）后修复，回归无破坏。完整修复过程与�
 ## 7. 质量门禁
 
 ```bash
-npm run check       # ruff + 98 项测试 + 覆盖率 ≥80%（server/xunji 94%）
+npm run check       # ruff + 109 项测试 + 覆盖率 ≥80%（server/xunji 94%）
 npm run test:e2e    # 离线态端到端冒烟（5 断言走通闭环）
 cd web && npm test  # 前端 Vitest + RTL + MSW（7 项）
 ```

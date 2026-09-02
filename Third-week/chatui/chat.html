@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>寻迹 · 对话演示</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%232563EB'/%3E%3Cpolygon points='16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/proto/css/prototype.css">
+<style>
+/* 对话演示独立界面：复用原型设计系统变量，仅补充聊天专有样式 */
+.chatwrap{max-width:880px;margin:0 auto}
+.chatlist{display:flex;flex-direction:column;gap:var(--s3);min-height:340px;max-height:58vh;overflow-y:auto;padding:var(--s2) var(--s1) var(--s3)}
+.chatmsg{display:flex;flex-direction:column;max-width:80%;align-self:flex-start}
+.chatmsg.user{align-self:flex-end;align-items:flex-end}
+.chatmsg .bubble{padding:10px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);box-shadow:var(--sd-1);white-space:pre-wrap;font-size:13.5px;line-height:1.65;color:var(--text)}
+.chatmsg.user .bubble{background:var(--brand-fill);border-color:var(--brand-fill);color:#fff}
+.chatmsg.err .bubble{background:var(--bad-dim);border-color:var(--bad-line);color:var(--bad)}
+.bubble.pending{color:var(--text-3)}
+.bubble.pending::after{content:"";display:inline-block;width:10px;height:10px;margin-left:8px;border:2px solid var(--line-strong);border-top-color:var(--brand);border-radius:50%;animation:cspin .8s linear infinite;vertical-align:-1px}
+@keyframes cspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.bubble.pending::after{animation:none}}
+.chatmeta{display:flex;align-items:center;gap:var(--s2);margin-top:6px;flex-wrap:wrap;font-size:11.5px}
+.chatform{display:flex;gap:var(--s2);margin-top:var(--s3);border-top:1px solid var(--line);padding-top:var(--s4)}
+.chatform input{flex:1;min-height:38px;padding:8px 12px;border:1px solid var(--line-2);border-radius:var(--r-sm);font:inherit;font-size:13.5px;background:var(--surface);color:var(--text)}
+.chatform input:focus-visible{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.chatform input:disabled{background:var(--surface-2);color:var(--text-disabled)}
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><b><span class="mark"><svg aria-hidden="true"><use href="#i-compass"/></svg></span>寻迹</b><span>Agent 链路诊断平台</span></div>
+    <nav class="nav" aria-label="主导航">
+      <a href="/chat" class="active"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>对话演示</a>
+      <a href="/proto/prototype.html#runs"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>业务工作台 →</a>
+    </nav>
+    <div class="sb-foot">每个问题真实执行一次 claude -p<br>Trace 旁路入库 · 接入即追踪</div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="topbar">
+      <div class="crumb">对话演示（真实执行）<b>接入即追踪</b></div>
+      <div class="userchip"><span id="sessionChip">新会话</span><div class="avatar" aria-hidden="true">寻</div></div>
+    </div>
+
+    <div class="chatwrap">
+      <div class="card">
+        <div class="hd"><b>对话演示</b><span class="tag t-brand">xunji run 包装</span>
+          <span class="sp"><button class="btn" id="btnNew" disabled><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>新对话</button></span>
+        </div>
+        <div class="bd">
+          <div class="chatlist" id="list" aria-label="对话消息">
+            <div class="empty" id="emptyHint">输入问题开始对话 — 回答与执行链路（Trace）同时产生；
+              多轮自动续接同一会话。结果可在<a href="/proto/prototype.html#runs">业务工作台</a>查看。</div>
+          </div>
+          <form class="chatform" id="form">
+            <input id="input" aria-label="问题输入" placeholder="输入问题，如：1875 + 2025 等于多少？" autocomplete="off">
+            <button type="submit" class="btn pri" id="btnSend" disabled><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg>发送</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let sessionId = null, busy = false, pollTimer = null;
+
+function setBusy(v){
+  busy = v;
+  $('input').disabled = v;
+  $('btnSend').disabled = v || !$('input').value.trim();
+  $('btnNew').disabled = v || (sessionId === null && !$('list').querySelector('.chatmsg'));
+  $('input').placeholder = v ? '执行中，请稍候…' : '输入问题，如：1875 + 2025 等于多少？';
+}
+
+function addMsg(cls, html){
+  $('emptyHint')?.remove();
+  const div = document.createElement('div');
+  div.className = 'chatmsg ' + cls;
+  div.innerHTML = html;
+  $('list').appendChild(div);
+  $('list').scrollTo?.({top: $('list').scrollHeight});
+  return div;
+}
+
+function metaHtml(job){
+  const parts = [];
+  if (job.trace_id) parts.push(`<a href="/proto/prototype.html#runs" title="业务工作台查看该 Trace"><span class="tag t-brand mono">${esc(job.trace_id)}</span></a>`);
+  if (job.span_count != null) parts.push(`<span class="tag t-gray">${job.span_count} 步骤</span>`);
+  parts.push(job.incident_id
+    ? `<a href="/proto/prototype.html#incidents"><span class="tag t-bad">事故 ${esc(job.incident_id)} → 诊断</span></a>`
+    : '<span class="muted">未触发事故</span>');
+  if (job.duration_ms != null) parts.push(`<span class="muted mono">${(job.duration_ms/1000).toFixed(1)}s</span>`);
+  return `<div class="chatmeta">${parts.join('')}</div>`;
+}
+
+async function poll(jobId, pendingEl){
+  try {
+    const job = await (await fetch('/v1/chat/messages/' + jobId)).json();
+    if (job.status === 'running') { pollTimer = setTimeout(() => poll(jobId, pendingEl), 1000); return; }
+    pendingEl.remove();
+    if (job.status === 'done') {
+      if (job.claude_session_id) { sessionId = job.claude_session_id; $('sessionChip').textContent = '多轮会话 ' + sessionId.slice(0,8) + '…'; }
+      addMsg('', `<div class="bubble">${esc(job.answer ?? '（无回答文本）')}</div>` + metaHtml(job));
+    } else {
+      addMsg('err', `<div class="bubble">执行失败：${esc(job.error ?? '未知原因')}</div>`);
+    }
+  } catch (e) {
+    pendingEl.remove();
+    addMsg('err', `<div class="bubble">轮询失败：${esc(e.message)}</div>`);
+  }
+  setBusy(false);
+}
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('input').value.trim();
+  if (!q || busy) return;
+  addMsg('user', `<div class="bubble">${esc(q)}</div>`);
+  $('input').value = '';
+  setBusy(true);
+  const pendingEl = addMsg('', '<div class="bubble pending">真实执行中：claude -p（旁路采集 Trace）…</div>');
+  try {
+    const body = sessionId ? {question: q, session_id: sessionId} : {question: q};
+    const r = await fetch('/v1/chat/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    if (!r.ok) throw new Error((await r.json()).detail ?? r.statusText);
+    poll((await r.json()).job_id, pendingEl);
+  } catch (err) {
+    pendingEl.remove();
+    addMsg('err', `<div class="bubble">提交失败：${esc(err.message)}</div>`);
+    setBusy(false);
+  }
+});
+$('input').addEventListener('input', () => { if (!busy) $('btnSend').disabled = !$('input').value.trim(); });
+$('btnNew').addEventListener('click', () => {
+  if (busy) return;
+  clearTimeout(pollTimer);
+  sessionId = null;
+  $('sessionChip').textContent = '新会话';
+  $('list').innerHTML = '<div class="empty" id="emptyHint">已开始新对话 — 上下文已重置。</div>';
+  setBusy(false);
+});
+setBusy(false);
+</script>
+</body>
+</html>

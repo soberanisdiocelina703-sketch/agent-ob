@@ -8,14 +8,16 @@ import json
 import re
 import sqlite3
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 from . import db as dbmod
 from . import chat
+from . import protodata
 from .diagnosis import load_candidates
 from .diffgen import compare_table, find_baseline
 from .gate import RegressionInvalid, create_regression_case, run_gate
@@ -204,6 +206,44 @@ def incident_diff(iid: str, baseline: str | None = None):
         return {"available": False, "reason": "no_baseline",
                 "message": "暂无可比成功基线；累积一次成功运行后 Diff 将启用"}
     return {"available": True, **compare_table(c, tid, baseline)}
+
+
+# ---------- 业务前端（中期原型，proto/ 三件套逐字节复制自 midterm/，不作任何修改） ----------
+
+PROTO_DIR = Path(__file__).resolve().parents[2] / "proto"
+CHATUI = Path(__file__).resolve().parents[2] / "chatui" / "chat.html"
+
+
+@app.get("/")
+def root_redirect():
+    return RedirectResponse("/proto/prototype.html")
+
+
+@app.get("/chat")
+def chat_page():
+    """对话演示独立前端（复用原型 CSS 设计系统，见 chatui/chat.html）。"""
+    return FileResponse(CHATUI, media_type="text/html")
+
+
+@app.get("/proto")
+def proto_index_redirect():
+    return RedirectResponse("/proto/prototype.html")
+
+
+@app.get("/proto/data.js")
+def proto_data_js():
+    """原型的数据层：按 midterm/data.js 契约从真实库实时生成（唯一适配层）。"""
+    return Response(protodata.render_data_js(conn()),
+                    media_type="application/javascript; charset=utf-8",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.get("/proto/{path:path}")
+def proto_static(path: str):
+    target = (PROTO_DIR / path).resolve()
+    if not target.is_relative_to(PROTO_DIR) or not target.is_file():
+        raise HTTPException(404, f"proto 资源 {path} 不存在")
+    return FileResponse(target)
 
 
 # ---------- 对话演示 ----------
